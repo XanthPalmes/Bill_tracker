@@ -28,6 +28,17 @@ abstract class Expense {
 	public abstract calculateMonthlyImpact(): number
 }
 
+// Simple bill entry that uses the base amount as the monthly impact.
+class SimpleExpense extends Expense {
+	constructor(id: string, name: string, baseAmount: number) {
+		super(id, name, baseAmount)
+	}
+
+	public calculateMonthlyImpact(): number {
+		return this.baseAmount
+	}
+}
+
 // Recurring subscriptions that bill on a cycle.
 abstract class RecurringSubscription extends Expense {
 	protected billingCycle: 'monthly' | 'annual'
@@ -224,10 +235,18 @@ type CategoryGroup = {
 class BillTrackerUI {
 	private readonly root: HTMLDivElement
 	private readonly groups: CategoryGroup[]
+	private closeModalHandler?: () => void
+	private readonly escapeListener: (event: KeyboardEvent) => void
 
 	constructor(root: HTMLDivElement, groups: CategoryGroup[]) {
 		this.root = root
 		this.groups = groups
+		this.escapeListener = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') {
+				this.closeModalHandler?.()
+			}
+		}
+		document.addEventListener('keydown', this.escapeListener)
 	}
 
 	public render(): void {
@@ -250,6 +269,7 @@ class BillTrackerUI {
         <section class="panel" aria-label="Bill overview">
           <div class="panel-header">
             <h2>Bill overview</h2>
+						<button class="add-button add-pill" type="button" data-group="Bill overview" aria-label="Add bill">Add +</button>
           </div>
           <div class="group-grid">
             ${this.groups.map((group) => this.renderGroup(group)).join('')}
@@ -274,11 +294,11 @@ class BillTrackerUI {
 						</label>
 						<label>
 							Category
-							<input name="category" type="text" data-category readonly />
-						</label>
-						<label>
-							Notes
-							<textarea name="notes" rows="3" placeholder="Optional"></textarea>
+							<select name="category" data-category required>
+								<option value="Subscriptions">Subscriptions</option>
+								<option value="Utilities">Utilities</option>
+								<option value="Debts">Debts</option>
+							</select>
 						</label>
 						<button class="modal-submit" type="submit">Save bill</button>
 					</form>
@@ -288,12 +308,17 @@ class BillTrackerUI {
 
 		// Lightweight click handler to confirm the add action.
 		const modal = this.root.querySelector<HTMLDivElement>('[data-modal]')
-		const modalCategory = this.root.querySelector<HTMLInputElement>('[data-category]')
+		const modalCategory = this.root.querySelector<HTMLSelectElement>('[data-category]')
 		const modalForm = this.root.querySelector<HTMLFormElement>('[data-form]')
 
 		const openModal = (label: string): void => {
 			if (!modal || !modalCategory) return
-			modalCategory.value = label
+			const hasOption = Array.from(modalCategory.options).some(
+				(option) => option.value === label
+			)
+			modalCategory.value = hasOption
+				? label
+				: modalCategory.options[0]?.value ?? label
 			modal.setAttribute('aria-hidden', 'false')
 			modal.classList.add('is-open')
 		}
@@ -304,6 +329,8 @@ class BillTrackerUI {
 			modal.setAttribute('aria-hidden', 'true')
 			modal.classList.remove('is-open')
 		}
+
+		this.closeModalHandler = closeModal
 
 		this.root.querySelectorAll<HTMLButtonElement>('.add-button').forEach((button) => {
 			button.addEventListener('click', () => {
@@ -318,14 +345,38 @@ class BillTrackerUI {
 
 		modalForm?.addEventListener('submit', (event) => {
 			event.preventDefault()
-			closeModal()
-		})
+			if (!modalForm) return
+			const formData = new FormData(modalForm)
+			const name = String(formData.get('name') ?? '').trim()
+			const category = String(formData.get('category') ?? '').trim()
+			const amountValue = Number(formData.get('amount'))
 
-		document.addEventListener('keydown', (event) => {
-			if (event.key === 'Escape') {
-				closeModal()
+			if (!name || !category || Number.isNaN(amountValue)) {
+				return
 			}
+
+			const expense = new SimpleExpense(
+				this.generateId('bill'),
+				name,
+				amountValue
+			)
+			this.addExpenseToGroup(category, expense)
+			closeModal()
+			this.render()
 		})
+	}
+
+	private addExpenseToGroup(label: string, expense: Expense): void {
+		const group = this.groups.find((item) => item.label === label)
+		if (!group) return
+		group.items.push(expense)
+	}
+
+	private generateId(prefix: string): string {
+		if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+			return `${prefix}-${crypto.randomUUID()}`
+		}
+		return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 	}
 
 	private renderGroup(group: CategoryGroup): string {
@@ -335,7 +386,6 @@ class BillTrackerUI {
         <header class="group-header">
 					<div class="group-title">
 						<h3>${group.label}</h3>
-						<button class="add-button" type="button" data-group="${group.label}" aria-label="Add bill to ${group.label}">+</button>
 					</div>
 					<span>${this.formatCurrency(total)}</span>
         </header>
@@ -346,7 +396,6 @@ class BillTrackerUI {
             <li>
               <div>
                 <p class="bill-name">${item.getName()}</p>
-                <p class="bill-note">Base ${this.formatCurrency(item.getBaseAmount())}</p>
               </div>
               <span class="bill-value">${this.formatCurrency(item.calculateMonthlyImpact())}</span>
             </li>
@@ -369,35 +418,24 @@ class BillTrackerUI {
 	}
 }
 
-const sampleGroups: CategoryGroup[] = [
+const groups: CategoryGroup[] = [
 	{
 		label: 'Subscriptions',
-		items: [
-			new DigitalMedia('sub-1', 'Streaming bundle', 24, 'monthly', 4),
-			new SoftwareLicense('sub-2', 'Design suite', 18, 'monthly', 36),
-			new DigitalMedia('sub-3', 'Music family plan', 15, 'monthly', 5)
-		]
+		items: []
 	},
 	{
 		label: 'Utilities',
-		items: [
-			new MeteredUtility('util-1', 'Electricity', 42, 'kWh', 230, 0.18),
-			new TieredUtility('util-2', 'Home internet', 55, 'GB', 500, 0.35, 620),
-			new MeteredUtility('util-3', 'Water', 22, 'gallons', 3400, 0.005)
-		]
+		items: []
 	},
 	{
-		label: 'Debt repayments',
-		items: [
-			new CreditCard('debt-1', 'Everyday card', 20, 0.22, 1200, 0.04),
-			new FixedLoan('debt-2', 'Auto loan', 6400, 0.08, 28)
-		]
+		label: 'Debts',
+		items: []
 	}
 ]
 
 const root = document.querySelector<HTMLDivElement>('#app')
 
 if (root) {
-	const ui = new BillTrackerUI(root, sampleGroups)
+	const ui = new BillTrackerUI(root, groups)
 	ui.render()
 }
