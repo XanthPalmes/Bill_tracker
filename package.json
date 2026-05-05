@@ -1,0 +1,9 @@
+{
+  "name": "bill_tracker",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix my-vite-project run dev",
+    "build": "npm --prefix my-vite-project run build",
+    "preview": "npm --prefix my-vite-project run preview"
+  }
+}
