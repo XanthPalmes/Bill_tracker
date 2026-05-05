@@ -1,7 +1,7 @@
 import './style.css'
 
 abstract class Bill {
-	private readonly _id: string
+	private _id: string
 	private _name: string
 	private _amount: number
 
@@ -15,12 +15,24 @@ abstract class Bill {
 		return this._id
 	}
 
+	public setId(id: string): void {
+		this._id = id
+	}
+
 	public name(): string {
 		return this._name
 	}
 
+	public setName(name: string): void {
+		this._name = name
+	}
+
 	public amount(): number {
 		return this._amount
+	}
+
+	public setAmount(amount: number): void {
+		this._amount = amount
 	}
 
 	public abstract monthlyImpact(): number
@@ -88,6 +100,10 @@ abstract class Debts extends Bill {
 
 	public termMonths(): number {
 		return this._termMonths
+	}
+
+	public setTermMonths(termMonths: number): void {
+		this._termMonths = termMonths
 	}
 }
 
@@ -188,31 +204,14 @@ class BillManager {
 	}
 }
 
-type GroupElements = {
-	totalEl: HTMLElement
-	listEl: HTMLUListElement
-}
-
-
 class TrackerUI {
-	private readonly _root: HTMLDivElement
-	private readonly _manager: BillManager
-	private readonly _totalValueEl: HTMLElement | null
-	private readonly _groupElements: Map<string, GroupElements>
+	private _root: HTMLDivElement
+	private _manager: BillManager
 	private _isBound = false
 
 	constructor(root: HTMLDivElement, manager: BillManager) {
 		this._root = root
 		this._manager = manager
-		this._totalValueEl = this._root.querySelector<HTMLElement>('[data-total]')
-		this._groupElements = new Map()
-		this._root.querySelectorAll<HTMLElement>('[data-group-card]').forEach((card) => {
-			const label = card.getAttribute('data-group-card') ?? ''
-			const totalEl = card.querySelector<HTMLElement>('[data-group-total]')
-			const listEl = card.querySelector<HTMLUListElement>('[data-group-list]')
-			if (!label || !totalEl || !listEl) return
-			this._groupElements.set(label, { totalEl, listEl })
-		})
 		this.bindEvents()
 	}
 
@@ -296,18 +295,22 @@ class TrackerUI {
 	}
 
 	private updateTotals(): void {
-		if (this._totalValueEl) {
-			this._totalValueEl.textContent = this.money(this._manager.getTotal())
-		}
+		const totalValueEl = this._root.querySelector<HTMLElement>('[data-total]')
+		if (!totalValueEl) return
+		totalValueEl.textContent = this.money(this._manager.getTotal())
 	}
 
 	private renderGroups(): void {
-		this._manager.getGroups().forEach((group) => {
-			const elements = this._groupElements.get(group.label)
-			if (!elements) return
+		this._root.querySelectorAll<HTMLElement>('[data-group-card]').forEach((card) => {
+			const label = card.getAttribute('data-group-card') ?? ''
+			const totalEl = card.querySelector<HTMLElement>('[data-group-total]')
+			const listEl = card.querySelector<HTMLUListElement>('[data-group-list]')
+			if (!label || !totalEl || !listEl) return
+			const group = this._manager.getGroups().find((item) => item.label === label)
+			if (!group) return
 			const total = group.items.reduce((sum, item) => sum + item.monthlyImpact(), 0)
-			elements.totalEl.textContent = this.money(total)
-			elements.listEl.replaceChildren()
+			totalEl.textContent = this.money(total)
+			listEl.replaceChildren()
 			group.items.forEach((item) => {
 				const listItem = document.createElement('li')
 				const billTypeLabel = this._manager.getBillTypeLabel(item)
@@ -332,7 +335,7 @@ class TrackerUI {
 				deleteButton.setAttribute('data-delete-id', item.id())
 				deleteButton.setAttribute('data-group', group.label)
 				listItem.append(content, value, deleteButton)
-				elements.listEl.appendChild(listItem)
+				listEl.appendChild(listItem)
 			})
 		})
 	}
