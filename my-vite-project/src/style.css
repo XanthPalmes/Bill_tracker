@@ -78,7 +78,26 @@ body {
   flex-direction: column;
   gap: 32px;
   padding: 32px clamp(20px, 5vw, 48px) 48px;
+  width: min(100%, 1900px);
+  margin: 0 auto;
   animation: float-in 0.6s ease-out;
+}
+
+.app-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.75fr) 240px;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 1200px) {
+  .app-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .group-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .hero {
@@ -145,6 +164,72 @@ body {
   border: 1px solid var(--border);
   border-radius: 24px;
   padding: 24px;
+  width: 100%;
+}
+
+.form-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 24px;
+  height: fit-content;
+  position: sticky;
+  top: 32px;
+}
+
+.form-panel h2 {
+  margin: 0 0 16px;
+  font: 600 1.2rem/1.2 var(--title-font);
+}
+
+.bill-form {
+  display: grid;
+  gap: 12px;
+}
+
+.bill-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.bill-form input,
+.bill-form select {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  font: 500 1rem/1.4 var(--body-font);
+  background: #fffdf7;
+  color: var(--ink);
+}
+
+.bill-form input:focus,
+.bill-form select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.form-submit {
+  margin-top: 8px;
+  padding: 12px 16px;
+  border-radius: 999px;
+  border: none;
+  background: var(--accent);
+  color: #3b2c25;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.2s ease;
+}
+
+.form-submit:hover {
+  transform: translateY(-1px);
+  background: #d49568;
+}
+
+.form-submit:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }
 
 .panel h2 {
@@ -167,12 +252,13 @@ body {
 
 .group-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
   gap: 18px;
   margin-top: 16px;
 }
 
 .group-card {
+  min-width: 0;
   background: #fff8e9;
   border: 1px solid var(--border);
   border-radius: 20px;
@@ -239,19 +325,40 @@ body {
 }
 
 .group-list li {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
   border-radius: 14px;
   background: var(--surface);
   border: 1px solid var(--border);
+  min-width: 0;
+}
+
+.group-list li > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.group-list li > .bill-value,
+.group-list li > .delete-button {
+  flex: 0 0 auto;
+}
+
+.bill-name,
+.bill-note {
+  overflow-wrap: anywhere;
 }
 
 .bill-name {
   margin: 0;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .bill-note {

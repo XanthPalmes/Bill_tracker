@@ -216,8 +216,6 @@ class TrackerUI {
 	private readonly _manager: BillManager
 	private readonly _totalValueEl: HTMLElement | null
 	private readonly _groupElements: Map<string, GroupElements>
-	private _closeModalHandler?: () => void
-	private readonly _escapeListener: (event: KeyboardEvent) => void
 	private _isBound = false
 
 	constructor(root: HTMLDivElement, manager: BillManager) {
@@ -232,12 +230,6 @@ class TrackerUI {
 			if (!label || !totalEl || !listEl) return
 			this._groupElements.set(label, { totalEl, listEl })
 		})
-		this._escapeListener = (event: KeyboardEvent) => {
-			if (event.key === 'Escape') {
-				this._closeModalHandler?.()
-			}
-		}
-		document.addEventListener('keydown', this._escapeListener)
 		this.bindEvents()
 	}
 
@@ -248,72 +240,38 @@ class TrackerUI {
 
 	private bindEvents(): void {
 		if (this._isBound) return
-		// Lightweight click handler to confirm the add action.
-		const modal = this._root.querySelector<HTMLDivElement>('[data-modal]')
-		const modalCategory = this._root.querySelector<HTMLSelectElement>('[data-category]')
-		const modalType = this._root.querySelector<HTMLSelectElement>('[data-type]')
-		const modalTypeField = this._root.querySelector<HTMLElement>('[data-type-field]')
-		const modalForm = this._root.querySelector<HTMLFormElement>('[data-form]')
+		const category = this._root.querySelector<HTMLSelectElement>('[data-category]')
+		const billType = this._root.querySelector<HTMLSelectElement>('[data-type]')
+		const typeField = this._root.querySelector<HTMLElement>('[data-type-field]')
+		const form = this._root.querySelector<HTMLFormElement>('[data-form]')
 
 		const syncTypeOptions = (category: string): void => {
-			if (!modalType || !modalTypeField) return
+			if (!billType || !typeField) return
 
 			const hasCategory = category.length > 0
-			modalTypeField.hidden = !hasCategory
+			typeField.hidden = !hasCategory
 
-			Array.from(modalType.options).forEach((option) => {
+			Array.from(billType.options).forEach((option) => {
 				const isMatch = option.dataset.category === category
 				option.hidden = !isMatch
 				option.disabled = !isMatch
 			})
 
 			if (!hasCategory) {
-				modalType.value = ''
+				billType.value = ''
 				return
 			}
 
-			const firstMatchingType = Array.from(modalType.options).find(
+			const firstMatchingType = Array.from(billType.options).find(
 				(option) => option.dataset.category === category
 			)
 			if (firstMatchingType) {
-				modalType.value = firstMatchingType.value
+				billType.value = firstMatchingType.value
 			}
 		}
 
-		const openModal = (label: string): void => {
-			if (!modal || !modalCategory || !modalType) return
-			const hasOption = Array.from(modalCategory.options).some(
-				(option) => option.value === label
-			)
-			modalCategory.value = hasOption ? label : ''
-			syncTypeOptions(modalCategory.value)
-			modal.setAttribute('aria-hidden', 'false')
-			modal.classList.add('is-open')
-		}
-
-		const closeModal = (): void => {
-			if (!modal || !modalForm) return
-			modalForm.reset()
-			syncTypeOptions('')
-			modal.setAttribute('aria-hidden', 'true')
-			modal.classList.remove('is-open')
-		}
-
-		this._closeModalHandler = closeModal
-
-		this._root.querySelectorAll<HTMLButtonElement>('.add-button').forEach((button) => {
-			button.addEventListener('click', () => {
-				const label = button.dataset.group ?? 'this group'
-				openModal(label)
-			})
-		})
-
-		this._root.querySelectorAll<HTMLElement>('[data-close]').forEach((button) => {
-			button.addEventListener('click', closeModal)
-		})
-
-		modalCategory?.addEventListener('change', () => {
-			syncTypeOptions(modalCategory.value)
+		category?.addEventListener('change', () => {
+			syncTypeOptions(category.value)
 		})
 
 		this._root.querySelectorAll<HTMLUListElement>('[data-group-list]').forEach((listEl) => {
@@ -329,10 +287,10 @@ class TrackerUI {
 			})
 		})
 
-		modalForm?.addEventListener('submit', (event) => {
+		form?.addEventListener('submit', (event) => {
 			event.preventDefault()
-			if (!modalForm) return
-			const formData = new FormData(modalForm)
+			if (!form) return
+			const formData = new FormData(form)
 			const name = String(formData.get('name') ?? '').trim()
 			const category = String(formData.get('category') ?? '').trim()
 			const billType = String(formData.get('billType') ?? '').trim()
@@ -344,7 +302,8 @@ class TrackerUI {
 
 			const bill = this._manager.createBill(category, billType, this.newId('bill'), name, amountValue)
 			this._manager.addToGroup(category, bill)
-			closeModal()
+			form.reset()
+			syncTypeOptions('')
 			this.render()
 		})
 

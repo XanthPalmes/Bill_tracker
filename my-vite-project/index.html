@@ -23,96 +23,78 @@
           </div>
         </header>
 
-        <section class="panel" aria-label="Bill overview">
-          <div class="panel-header">
-            <h2>Bill overview</h2>
-            <button
-              class="add-button add-pill"
-              type="button"
-              data-group="Subscriptions"
-              aria-label="Add bill"
-            >
-              Add +
-            </button>
-          </div>
-          <div class="group-grid">
-            <article class="group-card" data-group-card="Subscriptions">
-              <header class="group-header">
-                <div class="group-title">
-                  <h3>Subscriptions</h3>
-                </div>
-                <span data-group-total>₱0.00</span>
-              </header>
-              <ul class="group-list" data-group-list></ul>
-            </article>
-            <article class="group-card" data-group-card="Utilities">
-              <header class="group-header">
-                <div class="group-title">
-                  <h3>Utilities</h3>
-                </div>
-                <span data-group-total>₱0.00</span>
-              </header>
-              <ul class="group-list" data-group-list></ul>
-            </article>
-            <article class="group-card" data-group-card="Debts">
-              <header class="group-header">
-                <div class="group-title">
-                  <h3>Debts</h3>
-                </div>
-                <span data-group-total>₱0.00</span>
-              </header>
-              <ul class="group-list" data-group-list></ul>
-            </article>
-          </div>
-        </section>
-      </main>
-      <div class="modal" data-modal aria-hidden="true">
-        <div class="modal-backdrop" data-close></div>
-        <div
-          class="modal-card"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="modal-title"
-        >
-          <header class="modal-header">
-            <h2 id="modal-title">Add a bill</h2>
-            <button class="modal-close" type="button" data-close aria-label="Close">
-              ✕
-            </button>
-          </header>
-          <form class="modal-form" data-form>
-            <label>
-              Name
-              <input name="name" type="text" placeholder="e.g. Netflix" required />
-            </label>
-            <label>
-              Monthly Cost (₱)
-              <input name="amount" type="number" min="0" step="0.01" placeholder="0.00" required />
-            </label>
-            <label>
-              Category
-              <select name="category" data-category required>
-                <option value="" selected disabled>Choose category</option>
-                <option value="Subscriptions">Subscriptions</option>
-                <option value="Utilities">Utilities</option>
-                <option value="Debts">Debts</option>
-              </select>
-            </label>
-            <label data-type-field hidden>
-              Type
-              <select name="billType" data-type required>
-                <option value="EntertainmentSubscription" data-category="Subscriptions">Entertainment</option>
-                <option value="ProductivitySubscription" data-category="Subscriptions">Productivity</option>
-                <option value="EssentialUtility" data-category="Utilities">Essential</option>
-                <option value="NonEssentialUtility" data-category="Utilities">Non-essential</option>
-                <option value="OneTimeDebt" data-category="Debts">One-time</option>
-                <option value="RecurringDebt" data-category="Debts">Recurring</option>
-              </select>
-            </label>
-            <button class="modal-submit" type="submit">Save bill</button>
-          </form>
+        <div class="app-layout">
+          <section class="panel" aria-label="Bill overview">
+            <div class="panel-header">
+              <h2>Bill overview</h2>
+            </div>
+            <div class="group-grid">
+              <article class="group-card" data-group-card="Subscriptions">
+                <header class="group-header">
+                  <div class="group-title">
+                    <h3>Subscriptions</h3>
+                  </div>
+                  <span data-group-total>₱0.00</span>
+                </header>
+                <ul class="group-list" data-group-list></ul>
+              </article>
+              <article class="group-card" data-group-card="Utilities">
+                <header class="group-header">
+                  <div class="group-title">
+                    <h3>Utilities</h3>
+                  </div>
+                  <span data-group-total>₱0.00</span>
+                </header>
+                <ul class="group-list" data-group-list></ul>
+              </article>
+              <article class="group-card" data-group-card="Debts">
+                <header class="group-header">
+                  <div class="group-title">
+                    <h3>Debts</h3>
+                  </div>
+                  <span data-group-total>₱0.00</span>
+                </header>
+                <ul class="group-list" data-group-list></ul>
+              </article>
+            </div>
+          </section>
+
+          <section class="form-panel" aria-label="Add bill form">
+            <h2>Add a bill</h2>
+            <form class="bill-form" data-form>
+              <label>
+                Name
+                <input name="name" type="text" placeholder="e.g. Netflix" required />
+              </label>
+              <label>
+                Monthly Cost (₱)
+                <input name="amount" type="number" min="0" step="0.01" placeholder="0.00" required />
+              </label>
+              <label>
+                Category
+                <select name="category" data-category required>
+                  <option value="" selected disabled>Choose category</option>
+                  <option value="Subscriptions">Subscriptions</option>
+                  <option value="Utilities">Utilities</option>
+                  <option value="Debts">Debts</option>
+                </select>
+              </label>
+              <label data-type-field hidden>
+                Type
+                <select name="billType" data-type required>
+                  <option value="EntertainmentSubscription" data-category="Subscriptions">Entertainment</option>
+                  <option value="ProductivitySubscription" data-category="Subscriptions">Productivity</option>
+                  <option value="EssentialUtility" data-category="Utilities">Essential</option>
+                  <option value="NonEssentialUtility" data-category="Utilities">Non-essential</option>
+                  <option value="OneTimeDebt" data-category="Debts">One-time</option>
+                  <option value="RecurringDebt" data-category="Debts">Recurring</option>
+                </select>
+              </label>
+              <button class="form-submit" type="submit">Save bill</button>
+            </form>
+          </section>
         </div>
-      </div>
+      </main>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
