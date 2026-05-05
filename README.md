@@ -3,9 +3,7 @@ Se finals backup. a bill tracker
 
 # 💸 Billy
 
-**Billy** is a smart, comprehensive financial management tool designed to track, predict, and organize your monthly cash flow. Going beyond simple budgeting, Billy categorizes your outgoings into recurring subscriptions, fluctuating utilities, and debt repayments, applying specialized mathematical logic to calculate the exact financial impact of each.
-
-This project was built to demonstrate advanced, production-ready **Object-Oriented Programming (OOP)** principles in a strict TypeScript environment.
+**Billy** is a simple financial management tool build to track your monthly expenses. It categorizes your outgoings into recurring subscriptions, fluctuating utilities, and debt repayments.
 
 ---
 
