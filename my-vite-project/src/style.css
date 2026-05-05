@@ -285,36 +285,6 @@ body {
   gap: 8px;
 }
 
-.add-button {
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface-deep);
-  color: var(--ink);
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.15s ease, background 0.2s ease;
-}
-
-.add-button:hover {
-  transform: translateY(-1px);
-  background: var(--palette-1);
-}
-
-.add-button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.add-pill {
-  width: auto;
-  height: auto;
-  border-radius: 999px;
-  padding: 8px 16px;
-  font-size: 0.9rem;
-}
-
 .group-header span {
   color: var(--accent);
   font-weight: 700;

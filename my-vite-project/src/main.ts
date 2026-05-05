@@ -19,16 +19,8 @@ abstract class Bill {
 		return this._name
 	}
 
-	public setName(value: string): void {
-		this._name = value
-	}
-
 	public amount(): number {
 		return this._amount
-	}
-
-	public setAmount(value: number): void {
-		this._amount = value
 	}
 
 	public abstract monthlyImpact(): number
@@ -96,15 +88,6 @@ abstract class Debts extends Bill {
 
 	public termMonths(): number {
 		return this._termMonths
-	}
-
-	public setTermMonths(value: number): void {
-		this._termMonths = Math.max(1, value)
-	}
-
-	protected monthlyShare(): number {
-		const term = Math.max(1, this._termMonths)
-		return this.amount() / term
 	}
 }
 
@@ -240,38 +223,38 @@ class TrackerUI {
 
 	private bindEvents(): void {
 		if (this._isBound) return
-		const category = this._root.querySelector<HTMLSelectElement>('[data-category]')
-		const billType = this._root.querySelector<HTMLSelectElement>('[data-type]')
-		const typeField = this._root.querySelector<HTMLElement>('[data-type-field]')
-		const form = this._root.querySelector<HTMLFormElement>('[data-form]')
+		const formCategory = this._root.querySelector<HTMLSelectElement>('[data-category]')
+		const formType = this._root.querySelector<HTMLSelectElement>('[data-type]')
+		const formTypeField = this._root.querySelector<HTMLElement>('[data-type-field]')
+		const formEl = this._root.querySelector<HTMLFormElement>('[data-form]')
 
 		const syncTypeOptions = (category: string): void => {
-			if (!billType || !typeField) return
+			if (!formType || !formTypeField) return
 
 			const hasCategory = category.length > 0
-			typeField.hidden = !hasCategory
+			formTypeField.hidden = !hasCategory
 
-			Array.from(billType.options).forEach((option) => {
+			Array.from(formType.options).forEach((option) => {
 				const isMatch = option.dataset.category === category
 				option.hidden = !isMatch
 				option.disabled = !isMatch
 			})
 
 			if (!hasCategory) {
-				billType.value = ''
+				formType.value = ''
 				return
 			}
 
-			const firstMatchingType = Array.from(billType.options).find(
+			const firstMatchingType = Array.from(formType.options).find(
 				(option) => option.dataset.category === category
 			)
 			if (firstMatchingType) {
-				billType.value = firstMatchingType.value
+				formType.value = firstMatchingType.value
 			}
 		}
 
-		category?.addEventListener('change', () => {
-			syncTypeOptions(category.value)
+		formCategory?.addEventListener('change', () => {
+			syncTypeOptions(formCategory.value)
 		})
 
 		this._root.querySelectorAll<HTMLUListElement>('[data-group-list]').forEach((listEl) => {
@@ -287,10 +270,10 @@ class TrackerUI {
 			})
 		})
 
-		form?.addEventListener('submit', (event) => {
+		formEl?.addEventListener('submit', (event) => {
 			event.preventDefault()
-			if (!form) return
-			const formData = new FormData(form)
+			if (!formEl) return
+			const formData = new FormData(formEl)
 			const name = String(formData.get('name') ?? '').trim()
 			const category = String(formData.get('category') ?? '').trim()
 			const billType = String(formData.get('billType') ?? '').trim()
@@ -302,7 +285,7 @@ class TrackerUI {
 
 			const bill = this._manager.createBill(category, billType, this.newId('bill'), name, amountValue)
 			this._manager.addToGroup(category, bill)
-			form.reset()
+			formEl.reset()
 			syncTypeOptions('')
 			this.render()
 		})
@@ -355,10 +338,7 @@ class TrackerUI {
 	}
 
 	private newId(prefix: string): string {
-		if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-			return `${prefix}-${crypto.randomUUID()}`
-		}
-		return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+		return `${prefix}-${crypto.randomUUID()}`
 	}
 
 	private money(value: number): string {
