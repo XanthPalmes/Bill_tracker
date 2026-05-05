@@ -1,6 +1,5 @@
 import './style.css'
 
-// Base model shared by all bill types.
 abstract class Bill {
 	private readonly _id: string
 	private _name: string
@@ -20,16 +19,28 @@ abstract class Bill {
 		return this._name
 	}
 
+	public setName(value: string): void {
+		this._name = value
+	}
+
 	public amount(): number {
 		return this._amount
 	}
 
-	// Each child class defines its own monthly impact math.
+	public setAmount(value: number): void {
+		this._amount = value
+	}
+
 	public abstract monthlyImpact(): number
 }
 
-// Simple bill entry that uses the base amount as the monthly impact.
-class SimpleBill extends Bill {
+abstract class RecurringBill extends Bill {
+	constructor(id: string, name: string, baseAmount: number) {
+		super(id, name, baseAmount)
+	}
+}
+
+class SubscriptionBill extends RecurringBill {
 	constructor(id: string, name: string, baseAmount: number) {
 		super(id, name, baseAmount)
 	}
@@ -38,6 +49,53 @@ class SimpleBill extends Bill {
 		return this.amount()
 	}
 }
+
+class UtilityBill extends RecurringBill {
+	constructor(id: string, name: string, baseAmount: number) {
+		super(id, name, baseAmount)
+	}
+
+	// Example: utilities may fluctuate; apply a small buffer
+	public monthlyImpact(): number {
+		return Number((this.amount() * 1.02).toFixed(2))
+	}
+}
+
+// Parent class for one-time costs (debts, purchases)
+abstract class OneTimeBill extends Bill {
+	constructor(id: string, name: string, baseAmount: number) {
+		super(id, name, baseAmount)
+	}
+}
+
+class DebtBill extends OneTimeBill {
+	private _termMonths: number
+	constructor(id: string, name: string, baseAmount: number, termMonths = 12) {
+		super(id, name, baseAmount)
+		this._termMonths = termMonths
+	}
+
+	// Spread debt over a term to produce a monthly payment
+	public monthlyImpact(): number {
+		const term = Math.max(1, this._termMonths)
+		return Number((this.amount() / term).toFixed(2))
+	}
+}
+
+class ExpenseBill extends OneTimeBill {
+	constructor(id: string, name: string, baseAmount: number) {
+		super(id, name, baseAmount)
+	}
+
+	// One-time expenses do not contribute to monthly recurring total by default
+	public monthlyImpact(): number {
+		return 0
+	}
+}
+
+// Backwards-compatible simple bill that maps to a subscription-like recurring bill.
+class SimpleBill extends SubscriptionBill {}
+
 
 type CategoryGroup = {
 	label: string
@@ -149,7 +207,7 @@ class TrackerUI {
 				return
 			}
 
-			const bill = new SimpleBill(
+			const bill = new SubscriptionBill(
 				this.newId('bill'),
 				name,
 				amountValue
