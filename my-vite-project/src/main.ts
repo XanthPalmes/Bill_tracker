@@ -34,13 +34,13 @@ abstract class Bill {
 	public abstract monthlyImpact(): number
 }
 
-abstract class RecurringBill extends Bill {
+abstract class Subscription extends Bill {
 	constructor(id: string, name: string, baseAmount: number) {
 		super(id, name, baseAmount)
 	}
 }
 
-class SubscriptionBill extends RecurringBill {
+class EntertainmentSubscription extends Subscription {
 	constructor(id: string, name: string, baseAmount: number) {
 		super(id, name, baseAmount)
 	}
@@ -50,51 +50,83 @@ class SubscriptionBill extends RecurringBill {
 	}
 }
 
-class UtilityBill extends RecurringBill {
+class ProductivitySubscription extends Subscription {
 	constructor(id: string, name: string, baseAmount: number) {
 		super(id, name, baseAmount)
 	}
 
-	// Example: utilities may fluctuate; apply a small buffer
 	public monthlyImpact(): number {
-		return Number((this.amount() * 1.02).toFixed(2))
+		return this.amount()
 	}
 }
 
-// Parent class for one-time costs (debts, purchases)
-abstract class OneTimeBill extends Bill {
+abstract class Utility extends Bill {
 	constructor(id: string, name: string, baseAmount: number) {
 		super(id, name, baseAmount)
 	}
 }
 
-class DebtBill extends OneTimeBill {
+class EssentialUtility extends Utility {
+	constructor(id: string, name: string, baseAmount: number) {
+		super(id, name, baseAmount)
+	}
+
+	public monthlyImpact(): number {
+		return this.amount()
+	}
+}
+
+class NonEssentialUtility extends Utility {
+	constructor(id: string, name: string, baseAmount: number) {
+		super(id, name, baseAmount)
+	}
+
+	public monthlyImpact(): number {
+		return this.amount()
+	}
+}
+
+abstract class Debts extends Bill {
 	private _termMonths: number
+
 	constructor(id: string, name: string, baseAmount: number, termMonths = 12) {
 		super(id, name, baseAmount)
 		this._termMonths = termMonths
 	}
 
-	// Spread debt over a term to produce a monthly payment
-	public monthlyImpact(): number {
+	public termMonths(): number {
+		return this._termMonths
+	}
+
+	public setTermMonths(value: number): void {
+		this._termMonths = Math.max(1, value)
+	}
+
+	protected monthlyShare(): number {
 		const term = Math.max(1, this._termMonths)
-		return Number((this.amount() / term).toFixed(2))
+		return this.amount() / term
 	}
 }
 
-class ExpenseBill extends OneTimeBill {
-	constructor(id: string, name: string, baseAmount: number) {
-		super(id, name, baseAmount)
+class OneTimeDebt extends Debts {
+	constructor(id: string, name: string, baseAmount: number, termMonths = 12) {
+		super(id, name, baseAmount, termMonths)
 	}
 
-	// One-time expenses do not contribute to monthly recurring total by default
 	public monthlyImpact(): number {
-		return 0
+		return this.amount()
 	}
 }
 
-// Backwards-compatible simple bill that maps to a subscription-like recurring bill.
-class SimpleBill extends SubscriptionBill {}
+class RecurringDebt extends Debts {
+	constructor(id: string, name: string, baseAmount: number) {
+		super(id, name, baseAmount, 1)
+	}
+
+	public monthlyImpact(): number {
+		return this.amount()
+	}
+}
 
 
 type CategoryGroup = {
@@ -102,24 +134,95 @@ type CategoryGroup = {
 	items: Bill[]
 }
 
+class BillManager {
+	private groups: CategoryGroup[]
+
+	constructor(groups: CategoryGroup[]) {
+		this.groups = groups
+	}
+
+	public getGroups(): CategoryGroup[] {
+		return this.groups
+	}
+
+	public createBill(category: string, billType: string, id: string, name: string, amount: number): Bill {
+		if (category === 'Subscriptions') {
+			return billType === 'ProductivitySubscription'
+				? new ProductivitySubscription(id, name, amount)
+				: new EntertainmentSubscription(id, name, amount)
+		}
+
+		if (category === 'Utilities') {
+			return billType === 'NonEssentialUtility'
+				? new NonEssentialUtility(id, name, amount)
+				: new EssentialUtility(id, name, amount)
+		}
+
+		if (category === 'Debts') {
+			return billType === 'RecurringDebt'
+				? new RecurringDebt(id, name, amount)
+				: new OneTimeDebt(id, name, amount)
+		}
+
+		return new EntertainmentSubscription(id, name, amount)
+	}
+
+	public addToGroup(label: string, bill: Bill): void {
+		const group = this.groups.find((item) => item.label === label)
+		if (!group) return
+		group.items.push(bill)
+	}
+
+	public removeFromGroup(label: string, billId: string): void {
+		const group = this.groups.find((item) => item.label === label)
+		if (!group) return
+		group.items = group.items.filter((item) => item.id() !== billId)
+	}
+
+	public getTotal(): number {
+		return this.groups
+			.flatMap((group) => group.items)
+			.reduce((sum, item) => sum + item.monthlyImpact(), 0)
+	}
+
+	public getBillTypeLabel(bill: Bill): string {
+		switch (bill.constructor.name) {
+			case 'EntertainmentSubscription':
+				return 'Entertainment'
+			case 'ProductivitySubscription':
+				return 'Productivity'
+			case 'EssentialUtility':
+				return 'Essential'
+			case 'NonEssentialUtility':
+				return 'Non-essential'
+			case 'OneTimeDebt':
+				return 'One-time'
+			case 'RecurringDebt':
+				return 'Recurring'
+			default:
+				return bill.constructor.name.replace('Bill', '')
+		}
+	}
+}
+
 type GroupElements = {
 	totalEl: HTMLElement
 	listEl: HTMLUListElement
 }
 
-// Simple UI controller that renders the dashboard.
+
 class TrackerUI {
 	private readonly _root: HTMLDivElement
-	private readonly _groups: CategoryGroup[]
+	private readonly _manager: BillManager
 	private readonly _totalValueEl: HTMLElement | null
 	private readonly _groupElements: Map<string, GroupElements>
 	private _closeModalHandler?: () => void
 	private readonly _escapeListener: (event: KeyboardEvent) => void
 	private _isBound = false
 
-	constructor(root: HTMLDivElement, groups: CategoryGroup[]) {
+	constructor(root: HTMLDivElement, manager: BillManager) {
 		this._root = root
-		this._groups = groups
+		this._manager = manager
 		this._totalValueEl = this._root.querySelector<HTMLElement>('[data-total]')
 		this._groupElements = new Map()
 		this._root.querySelectorAll<HTMLElement>('[data-group-card]').forEach((card) => {
@@ -148,16 +251,42 @@ class TrackerUI {
 		// Lightweight click handler to confirm the add action.
 		const modal = this._root.querySelector<HTMLDivElement>('[data-modal]')
 		const modalCategory = this._root.querySelector<HTMLSelectElement>('[data-category]')
+		const modalType = this._root.querySelector<HTMLSelectElement>('[data-type]')
+		const modalTypeField = this._root.querySelector<HTMLElement>('[data-type-field]')
 		const modalForm = this._root.querySelector<HTMLFormElement>('[data-form]')
 
+		const syncTypeOptions = (category: string): void => {
+			if (!modalType || !modalTypeField) return
+
+			const hasCategory = category.length > 0
+			modalTypeField.hidden = !hasCategory
+
+			Array.from(modalType.options).forEach((option) => {
+				const isMatch = option.dataset.category === category
+				option.hidden = !isMatch
+				option.disabled = !isMatch
+			})
+
+			if (!hasCategory) {
+				modalType.value = ''
+				return
+			}
+
+			const firstMatchingType = Array.from(modalType.options).find(
+				(option) => option.dataset.category === category
+			)
+			if (firstMatchingType) {
+				modalType.value = firstMatchingType.value
+			}
+		}
+
 		const openModal = (label: string): void => {
-			if (!modal || !modalCategory) return
+			if (!modal || !modalCategory || !modalType) return
 			const hasOption = Array.from(modalCategory.options).some(
 				(option) => option.value === label
 			)
-			modalCategory.value = hasOption
-				? label
-				: modalCategory.options[0]?.value ?? label
+			modalCategory.value = hasOption ? label : ''
+			syncTypeOptions(modalCategory.value)
 			modal.setAttribute('aria-hidden', 'false')
 			modal.classList.add('is-open')
 		}
@@ -165,6 +294,7 @@ class TrackerUI {
 		const closeModal = (): void => {
 			if (!modal || !modalForm) return
 			modalForm.reset()
+			syncTypeOptions('')
 			modal.setAttribute('aria-hidden', 'true')
 			modal.classList.remove('is-open')
 		}
@@ -182,6 +312,10 @@ class TrackerUI {
 			button.addEventListener('click', closeModal)
 		})
 
+		modalCategory?.addEventListener('change', () => {
+			syncTypeOptions(modalCategory.value)
+		})
+
 		this._root.querySelectorAll<HTMLUListElement>('[data-group-list]').forEach((listEl) => {
 			listEl.addEventListener('click', (event) => {
 				const target = event.target as HTMLElement | null
@@ -190,7 +324,7 @@ class TrackerUI {
 				const billId = deleteButton.getAttribute('data-delete-id')
 				const groupLabel = deleteButton.getAttribute('data-group')
 				if (!billId || !groupLabel) return
-				this.removeFromGroup(groupLabel, billId)
+				this._manager.removeFromGroup(groupLabel, billId)
 				this.render()
 			})
 		})
@@ -201,33 +335,32 @@ class TrackerUI {
 			const formData = new FormData(modalForm)
 			const name = String(formData.get('name') ?? '').trim()
 			const category = String(formData.get('category') ?? '').trim()
+			const billType = String(formData.get('billType') ?? '').trim()
 			const amountValue = Number(formData.get('amount'))
 
-			if (!name || !category || Number.isNaN(amountValue)) {
+			if (!name || !category || !billType || Number.isNaN(amountValue)) {
 				return
 			}
 
-			const bill = new SubscriptionBill(
-				this.newId('bill'),
-				name,
-				amountValue
-			)
-			this.addToGroup(category, bill)
+			const bill = this._manager.createBill(category, billType, this.newId('bill'), name, amountValue)
+			this._manager.addToGroup(category, bill)
 			closeModal()
 			this.render()
 		})
+
+		syncTypeOptions('')
 
 		this._isBound = true
 	}
 
 	private updateTotals(): void {
 		if (this._totalValueEl) {
-			this._totalValueEl.textContent = this.money(this.total())
+			this._totalValueEl.textContent = this.money(this._manager.getTotal())
 		}
 	}
 
 	private renderGroups(): void {
-		this._groups.forEach((group) => {
+		this._manager.getGroups().forEach((group) => {
 			const elements = this._groupElements.get(group.label)
 			if (!elements) return
 			const total = group.items.reduce((sum, item) => sum + item.monthlyImpact(), 0)
@@ -235,11 +368,17 @@ class TrackerUI {
 			elements.listEl.replaceChildren()
 			group.items.forEach((item) => {
 				const listItem = document.createElement('li')
+				const billTypeLabel = this._manager.getBillTypeLabel(item)
+				listItem.setAttribute('data-bill-type', billTypeLabel)
 				const content = document.createElement('div')
 				const name = document.createElement('p')
 				name.className = 'bill-name'
 				name.textContent = item.name()
 				content.appendChild(name)
+				const note = document.createElement('p')
+				note.className = 'bill-note'
+				note.textContent = billTypeLabel
+				content.appendChild(note)
 				const value = document.createElement('span')
 				value.className = 'bill-value'
 				value.textContent = this.money(item.monthlyImpact())
@@ -256,29 +395,11 @@ class TrackerUI {
 		})
 	}
 
-	private addToGroup(label: string, bill: Bill): void {
-		const group = this._groups.find((item) => item.label === label)
-		if (!group) return
-		group.items.push(bill)
-	}
-
-	private removeFromGroup(label: string, billId: string): void {
-		const group = this._groups.find((item) => item.label === label)
-		if (!group) return
-		group.items = group.items.filter((item) => item.id() !== billId)
-	}
-
 	private newId(prefix: string): string {
 		if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
 			return `${prefix}-${crypto.randomUUID()}`
 		}
 		return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
-	}
-
-	private total(): number {
-		return this._groups
-			.flatMap((group) => group.items)
-			.reduce((sum, item) => sum + item.monthlyImpact(), 0)
 	}
 
 	private money(value: number): string {
@@ -304,6 +425,7 @@ const groups: CategoryGroup[] = [
 const root = document.querySelector<HTMLDivElement>('#app')
 
 if (root) {
-	const ui = new TrackerUI(root, groups)
+	const manager = new BillManager(groups)
+	const ui = new TrackerUI(root, manager)
 	ui.render()
 }

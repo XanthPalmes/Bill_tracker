@@ -92,9 +92,21 @@
             <label>
               Category
               <select name="category" data-category required>
+                <option value="" selected disabled>Choose category</option>
                 <option value="Subscriptions">Subscriptions</option>
                 <option value="Utilities">Utilities</option>
                 <option value="Debts">Debts</option>
+              </select>
+            </label>
+            <label data-type-field hidden>
+              Type
+              <select name="billType" data-type required>
+                <option value="EntertainmentSubscription" data-category="Subscriptions">Entertainment</option>
+                <option value="ProductivitySubscription" data-category="Subscriptions">Productivity</option>
+                <option value="EssentialUtility" data-category="Utilities">Essential</option>
+                <option value="NonEssentialUtility" data-category="Utilities">Non-essential</option>
+                <option value="OneTimeDebt" data-category="Debts">One-time</option>
+                <option value="RecurringDebt" data-category="Debts">Recurring</option>
               </select>
             </label>
             <button class="modal-submit" type="submit">Save bill</button>
