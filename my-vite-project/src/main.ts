@@ -124,6 +124,19 @@ class TrackerUI {
 			button.addEventListener('click', closeModal)
 		})
 
+		this._root.querySelectorAll<HTMLUListElement>('[data-group-list]').forEach((listEl) => {
+			listEl.addEventListener('click', (event) => {
+				const target = event.target as HTMLElement | null
+				const deleteButton = target?.closest<HTMLButtonElement>('[data-delete-id]')
+				if (!deleteButton) return
+				const billId = deleteButton.getAttribute('data-delete-id')
+				const groupLabel = deleteButton.getAttribute('data-group')
+				if (!billId || !groupLabel) return
+				this.removeFromGroup(groupLabel, billId)
+				this.render()
+			})
+		})
+
 		modalForm?.addEventListener('submit', (event) => {
 			event.preventDefault()
 			if (!modalForm) return
@@ -172,7 +185,14 @@ class TrackerUI {
 				const value = document.createElement('span')
 				value.className = 'bill-value'
 				value.textContent = this.money(item.monthlyImpact())
-				listItem.append(content, value)
+				const deleteButton = document.createElement('button')
+				deleteButton.className = 'delete-button'
+				deleteButton.type = 'button'
+				deleteButton.textContent = 'Delete'
+				deleteButton.setAttribute('aria-label', `Delete ${item.name()}`)
+				deleteButton.setAttribute('data-delete-id', item.id())
+				deleteButton.setAttribute('data-group', group.label)
+				listItem.append(content, value, deleteButton)
 				elements.listEl.appendChild(listItem)
 			})
 		})
@@ -182,6 +202,12 @@ class TrackerUI {
 		const group = this._groups.find((item) => item.label === label)
 		if (!group) return
 		group.items.push(bill)
+	}
+
+	private removeFromGroup(label: string, billId: string): void {
+		const group = this._groups.find((item) => item.label === label)
+		if (!group) return
+		group.items = group.items.filter((item) => item.id() !== billId)
 	}
 
 	private newId(prefix: string): string {
