@@ -6,7 +6,7 @@ abstract class Bill {
 	private _name: string
 	private _amount: number
 
-	protected constructor(id: string, name: string, baseAmount: number) {
+	constructor(id: string, name: string, baseAmount: number) {
 		this._id = id
 		this._name = name
 		this._amount = baseAmount
