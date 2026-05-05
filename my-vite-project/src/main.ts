@@ -231,81 +231,49 @@ type CategoryGroup = {
 	items: Expense[]
 }
 
+type GroupElements = {
+	totalEl: HTMLElement
+	listEl: HTMLUListElement
+}
+
 // Simple UI controller that renders the dashboard.
 class BillTrackerUI {
 	private readonly root: HTMLDivElement
 	private readonly groups: CategoryGroup[]
+	private readonly totalValueEl: HTMLElement | null
+	private readonly groupElements: Map<string, GroupElements>
 	private closeModalHandler?: () => void
 	private readonly escapeListener: (event: KeyboardEvent) => void
+	private isBound = false
 
 	constructor(root: HTMLDivElement, groups: CategoryGroup[]) {
 		this.root = root
 		this.groups = groups
+		this.totalValueEl = this.root.querySelector<HTMLElement>('[data-total]')
+		this.groupElements = new Map()
+		this.root.querySelectorAll<HTMLElement>('[data-group-card]').forEach((card) => {
+			const label = card.getAttribute('data-group-card') ?? ''
+			const totalEl = card.querySelector<HTMLElement>('[data-group-total]')
+			const listEl = card.querySelector<HTMLUListElement>('[data-group-list]')
+			if (!label || !totalEl || !listEl) return
+			this.groupElements.set(label, { totalEl, listEl })
+		})
 		this.escapeListener = (event: KeyboardEvent) => {
 			if (event.key === 'Escape') {
 				this.closeModalHandler?.()
 			}
 		}
 		document.addEventListener('keydown', this.escapeListener)
+		this.bindEvents()
 	}
 
 	public render(): void {
-		this.root.innerHTML = `
-      <main class="app" aria-label="Billy bill tracker">
-        <header class="hero">
-          <div class="hero-title">
-            <span class="hero-emoji" aria-hidden="true">💸</span>
-            <div>
-              <p class="hero-kicker">Billy</p>
-              <h1>Monthly Bill Tracker</h1>
-            </div>
-          </div>
-          <div class="hero-total">
-			<span class="hero-total-label">Monthly Expenses</span>
-            <strong class="hero-total-value">${this.formatCurrency(this.getTotal())}</strong>
-          </div>
-        </header>
+		this.updateTotals()
+		this.renderGroups()
+	}
 
-        <section class="panel" aria-label="Bill overview">
-          <div class="panel-header">
-            <h2>Bill overview</h2>
-						<button class="add-button add-pill" type="button" data-group="Bill overview" aria-label="Add bill">Add +</button>
-          </div>
-          <div class="group-grid">
-            ${this.groups.map((group) => this.renderGroup(group)).join('')}
-          </div>
-        </section>
-      </main>
-			<div class="modal" data-modal aria-hidden="true">
-				<div class="modal-backdrop" data-close></div>
-				<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-					<header class="modal-header">
-						<h2 id="modal-title">Add a bill</h2>
-						<button class="modal-close" type="button" data-close aria-label="Close">✕</button>
-					</header>
-					<form class="modal-form" data-form>
-						<label>
-							Bill name
-							<input name="name" type="text" placeholder="e.g. Streaming bundle" required />
-						</label>
-						<label>
-							Base amount (₱)
-							<input name="amount" type="number" min="0" step="0.01" placeholder="0.00" required />
-						</label>
-						<label>
-							Category
-							<select name="category" data-category required>
-								<option value="Subscriptions">Subscriptions</option>
-								<option value="Utilities">Utilities</option>
-								<option value="Debts">Debts</option>
-							</select>
-						</label>
-						<button class="modal-submit" type="submit">Save bill</button>
-					</form>
-				</div>
-			</div>
-    `
-
+	private bindEvents(): void {
+		if (this.isBound) return
 		// Lightweight click handler to confirm the add action.
 		const modal = this.root.querySelector<HTMLDivElement>('[data-modal]')
 		const modalCategory = this.root.querySelector<HTMLSelectElement>('[data-category]')
@@ -364,6 +332,37 @@ class BillTrackerUI {
 			closeModal()
 			this.render()
 		})
+
+		this.isBound = true
+	}
+
+	private updateTotals(): void {
+		if (this.totalValueEl) {
+			this.totalValueEl.textContent = this.formatCurrency(this.getTotal())
+		}
+	}
+
+	private renderGroups(): void {
+		this.groups.forEach((group) => {
+			const elements = this.groupElements.get(group.label)
+			if (!elements) return
+			const total = group.items.reduce((sum, item) => sum + item.calculateMonthlyImpact(), 0)
+			elements.totalEl.textContent = this.formatCurrency(total)
+			elements.listEl.replaceChildren()
+			group.items.forEach((item) => {
+				const listItem = document.createElement('li')
+				const content = document.createElement('div')
+				const name = document.createElement('p')
+				name.className = 'bill-name'
+				name.textContent = item.getName()
+				content.appendChild(name)
+				const value = document.createElement('span')
+				value.className = 'bill-value'
+				value.textContent = this.formatCurrency(item.calculateMonthlyImpact())
+				listItem.append(content, value)
+				elements.listEl.appendChild(listItem)
+			})
+		})
 	}
 
 	private addExpenseToGroup(label: string, expense: Expense): void {
@@ -377,34 +376,6 @@ class BillTrackerUI {
 			return `${prefix}-${crypto.randomUUID()}`
 		}
 		return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
-	}
-
-	private renderGroup(group: CategoryGroup): string {
-		const total = group.items.reduce((sum, item) => sum + item.calculateMonthlyImpact(), 0)
-		return `
-      <article class="group-card">
-        <header class="group-header">
-					<div class="group-title">
-						<h3>${group.label}</h3>
-					</div>
-					<span>${this.formatCurrency(total)}</span>
-        </header>
-        <ul class="group-list">
-          ${group.items
-				.map(
-					(item) => `
-            <li>
-              <div>
-                <p class="bill-name">${item.getName()}</p>
-              </div>
-              <span class="bill-value">${this.formatCurrency(item.calculateMonthlyImpact())}</span>
-            </li>
-          `
-				)
-				.join('')}
-        </ul>
-      </article>
-    `
 	}
 
 	private getTotal(): number {
