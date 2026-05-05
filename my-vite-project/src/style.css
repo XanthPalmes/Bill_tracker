@@ -47,19 +47,19 @@ body {
   margin: 0;
   min-height: 100vh;
   background: radial-gradient(circle at top, var(--palette-4), var(--bg));
-  padding: 32px 20px 48px;
+  padding: 32px 12px 48px;
   font: 16px/1.6 var(--body-font);
   color: var(--ink);
 }
 
 #app {
-  width: min(1160px, 100%);
+  width: 100%;
   margin: 0 auto;
-  background: var(--surface);
-  border-radius: 32px;
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border);
-  overflow: hidden;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
+  overflow: visible;
 }
 
 @keyframes float-in {
@@ -78,14 +78,14 @@ body {
   flex-direction: column;
   gap: 32px;
   padding: 32px clamp(20px, 5vw, 48px) 48px;
-  width: min(100%, 1900px);
+  width: 100%;
   margin: 0 auto;
   animation: float-in 0.6s ease-out;
 }
 
 .app-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.75fr) 240px;
+  grid-template-columns: minmax(0, 1.65fr) 360px;
   gap: 24px;
   align-items: start;
 }
@@ -142,7 +142,7 @@ body {
   border-radius: 18px;
   background: var(--surface);
   border: 1px solid var(--border);
-  text-align: right;
+  text-align: left;
 }
 
 .hero-total-label {
@@ -172,6 +172,8 @@ body {
   border: 1px solid var(--border);
   border-radius: 24px;
   padding: 24px;
+  width: 100%;
+  min-width: 0;
   height: fit-content;
   position: sticky;
   top: 32px;
@@ -196,6 +198,8 @@ body {
 
 .bill-form input,
 .bill-form select {
+  width: 100%;
+  min-width: 0;
   border-radius: 12px;
   border: 1px solid var(--border);
   padding: 10px 12px;
