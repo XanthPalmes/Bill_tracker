@@ -11,6 +11,7 @@ classDiagram
         - _id: string
         - _name: string
         - _amount: number
+        + constructor(id: string, name: string, baseAmount: number)
         + get id(): string
         + set id(value: string)
         + get name(): string
@@ -23,58 +24,68 @@ classDiagram
 
     class Subscription {
         <<abstract>>
+        + constructor(id: string, name: string, baseAmount: number)
     }
 
     class EntertainmentSubscription {
+        + constructor(id: string, name: string, baseAmount: number)
         + monthlyImpact(): number
         + priority(): number
     }
 
     class ProductivitySubscription {
+        + constructor(id: string, name: string, baseAmount: number)
         + monthlyImpact(): number
         + priority(): number
     }
 
     class Utility {
         <<abstract>>
+        + constructor(id: string, name: string, baseAmount: number)
     }
 
     class EssentialUtility {
+        + constructor(id: string, name: string, baseAmount: number)
         + monthlyImpact(): number
         + priority(): number
     }
 
     class NonEssentialUtility {
+        + constructor(id: string, name: string, baseAmount: number)
         + monthlyImpact(): number
         + priority(): number
     }
 
     class Debts {
         <<abstract>>
+        + constructor(id: string, name: string, baseAmount: number)
     }
 
     class OneTimeDebt {
+        + constructor(id: string, name: string, baseAmount: number)
         + monthlyImpact(): number
         + priority(): number
     }
 
     class RecurringDebt {
+        + constructor(id: string, name: string, baseAmount: number)
         + monthlyImpact(): number
         + priority(): number
     }
 
     class CategoryGroup {
-        + key: string
-        + title: string
-        + bills: Bill[]
+        <<type>>
+        + label: string
+        + items: Bill[]
     }
 
     class BillManager {
         - groups: CategoryGroup[]
+        + constructor(groups: CategoryGroup[])
         + getGroups(): CategoryGroup[]
-        + createBill(category: string, type: string, id: string, name: string, amount: number): Bill
-        + addToGroup(category: string, bill: Bill): void
-        + removeFromGroup(category: string, id: string): void
+        + createBill(category: string, billType: string, id: string, name: string, amount: number): Bill
+        + addToGroup(label: string, bill: Bill): void
+        + removeFromGroup(label: string, billId: string): void
         + getTotal(): number
         + getBillTypeLabel(bill: Bill): string
     }
@@ -83,7 +94,13 @@ classDiagram
         - _root: HTMLDivElement
         - _manager: BillManager
         - _isBound: boolean
+        + constructor(root: HTMLDivElement, manager: BillManager)
         + render(): void
+        - bindEvents(): void
+        - updateTotals(): void
+        - renderGroups(): void
+        - newId(prefix: string): string
+        - money(value: number): string
     }
 
     Bill <|-- Subscription
