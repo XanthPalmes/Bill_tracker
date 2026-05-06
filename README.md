@@ -7,51 +7,83 @@ Billy is a simple monthly bill tracker that lets you add bills by category (Subs
 ```mermaid
 classDiagram
     class Bill {
-      -string _id
-      -string _name
-      -number _amount
-      +id() string
-      +setId(id: string) void
-      +name() string
-      +setName(name: string) void
-      +amount() number
-      +setAmount(amount: number) void
-      +monthlyImpact() number
-      +priority() number
+        <<abstract>>
+        - _id: string
+        - _name: string
+        - _amount: number
+        + get id(): string
+        + set id(value: string)
+        + get name(): string
+        + set name(value: string)
+        + get amount(): number
+        + set amount(value: number)
+        + monthlyImpact(): number
+        + priority(): number
     }
 
-    class Subscription
-    class EntertainmentSubscription
-    class ProductivitySubscription
-
-    class Utility
-    class EssentialUtility
-    class NonEssentialUtility
-
-    class Debts
-    class OneTimeDebt
-    class RecurringDebt
-
-    class BillManager {
-      -CategoryGroup[] groups
-      +getGroups() CategoryGroup[]
-      +createBill(category: string, billType: string, id: string, name: string, amount: number) Bill
-      +addToGroup(label: string, bill: Bill) void
-      +removeFromGroup(label: string, billId: string) void
-      +getTotal() number
-      +getBillTypeLabel(bill: Bill) string
+    class Subscription {
+        <<abstract>>
     }
 
-    class TrackerUI {
-      -HTMLDivElement _root
-      -BillManager _manager
-      -boolean _isBound
-      +render() void
+    class EntertainmentSubscription {
+        + monthlyImpact(): number
+        + priority(): number
+    }
+
+    class ProductivitySubscription {
+        + monthlyImpact(): number
+        + priority(): number
+    }
+
+    class Utility {
+        <<abstract>>
+    }
+
+    class EssentialUtility {
+        + monthlyImpact(): number
+        + priority(): number
+    }
+
+    class NonEssentialUtility {
+        + monthlyImpact(): number
+        + priority(): number
+    }
+
+    class Debts {
+        <<abstract>>
+    }
+
+    class OneTimeDebt {
+        + monthlyImpact(): number
+        + priority(): number
+    }
+
+    class RecurringDebt {
+        + monthlyImpact(): number
+        + priority(): number
     }
 
     class CategoryGroup {
-      +string label
-      +Bill[] items
+        + key: string
+        + title: string
+        + bills: Bill[]
+    }
+
+    class BillManager {
+        - groups: CategoryGroup[]
+        + getGroups(): CategoryGroup[]
+        + createBill(category: string, type: string, id: string, name: string, amount: number): Bill
+        + addToGroup(category: string, bill: Bill): void
+        + removeFromGroup(category: string, id: string): void
+        + getTotal(): number
+        + getBillTypeLabel(bill: Bill): string
+    }
+
+    class TrackerUI {
+        - _root: HTMLDivElement
+        - _manager: BillManager
+        - _isBound: boolean
+        + render(): void
     }
 
     Bill <|-- Subscription
@@ -66,7 +98,7 @@ classDiagram
     Debts <|-- OneTimeDebt
     Debts <|-- RecurringDebt
 
-    BillManager o-- CategoryGroup
-    CategoryGroup o-- Bill
+    CategoryGroup "1" --> "*" Bill
+    BillManager "1" --> "*" CategoryGroup
     TrackerUI --> BillManager
 ```
