@@ -91,25 +91,14 @@ class NonEssentialUtility extends Utility {
 }
 
 abstract class Debts extends Bill {
-	private _termMonths: number
-
-	constructor(id: string, name: string, baseAmount: number, termMonths = 12) {
+	constructor(id: string, name: string, baseAmount: number) {
 		super(id, name, baseAmount)
-		this._termMonths = termMonths
-	}
-
-	public termMonths(): number {
-		return this._termMonths
-	}
-
-	public setTermMonths(termMonths: number): void {
-		this._termMonths = termMonths
 	}
 }
 
 class OneTimeDebt extends Debts {
-	constructor(id: string, name: string, baseAmount: number, termMonths = 12) {
-		super(id, name, baseAmount, termMonths)
+	constructor(id: string, name: string, baseAmount: number) {
+		super(id, name, baseAmount)
 	}
 
 	public monthlyImpact(): number {
@@ -119,7 +108,7 @@ class OneTimeDebt extends Debts {
 
 class RecurringDebt extends Debts {
 	constructor(id: string, name: string, baseAmount: number) {
-		super(id, name, baseAmount, 1)
+		super(id, name, baseAmount)
 	}
 
 	public monthlyImpact(): number {
