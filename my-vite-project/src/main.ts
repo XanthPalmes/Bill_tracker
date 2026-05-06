@@ -11,28 +11,28 @@ abstract class Bill {
 		this._amount = baseAmount
 	}
 
-	public id(): string {
+	public get id(): string {
 		return this._id
 	}
 
-	public setId(id: string): void {
-		this._id = id
+	public set id(value: string) {
+		this._id = value
 	}
 
-	public name(): string {
+	public get name(): string {
 		return this._name
 	}
 
-	public setName(name: string): void {
-		this._name = name
+	public set name(value: string) {
+		this._name = value
 	}
 
-	public amount(): number {
+	public get amount(): number {
 		return this._amount
 	}
 
-	public setAmount(amount: number): void {
-		this._amount = amount
+	public set amount(value: number) {
+		this._amount = value
 	}
 
 	public abstract monthlyImpact(): number
@@ -52,11 +52,11 @@ class EntertainmentSubscription extends Subscription {
 	}
 
 	public monthlyImpact(): number {
-		return this.amount()
+		return this.amount
 	}
 
 	public priority(): number {
-		return 2  // Entertainment: lower priority
+		return 2 
 	}
 }
 
@@ -66,11 +66,11 @@ class ProductivitySubscription extends Subscription {
 	}
 
 	public monthlyImpact(): number {
-		return this.amount()
+		return this.amount
 	}
 
 	public priority(): number {
-		return 3  // Productivity: higher priority than entertainment
+		return 3  
 	}
 }
 
@@ -86,11 +86,11 @@ class EssentialUtility extends Utility {
 	}
 
 	public monthlyImpact(): number {
-		return this.amount()
+		return this.amount
 	}
 
 	public priority(): number {
-		return 5  // Essential: critical priority
+		return 5 
 	}
 }
 
@@ -100,11 +100,11 @@ class NonEssentialUtility extends Utility {
 	}
 
 	public monthlyImpact(): number {
-		return this.amount()
+		return this.amount
 	}
 
 	public priority(): number {
-		return 1  // Non-essential: lowest priority
+		return 1 
 	}
 }
 
@@ -120,11 +120,11 @@ class OneTimeDebt extends Debts {
 	}
 
 	public monthlyImpact(): number {
-		return this.amount()
+		return this.amount
 	}
 
 	public priority(): number {
-		return 4  // One-time debt: high priority
+		return 4  
 	}
 }
 
@@ -134,11 +134,11 @@ class RecurringDebt extends Debts {
 	}
 
 	public monthlyImpact(): number {
-		return this.amount()
+		return this.amount
 	}
 
 	public priority(): number {
-		return 5  // Recurring debt: highest priority
+		return 5  
 	}
 }
 
@@ -190,7 +190,7 @@ class BillManager {
 	public removeFromGroup(label: string, billId: string): void {
 		const group = this.groups.find((item) => item.label === label)
 		if (!group) return
-		group.items = group.items.filter((item) => item.id() !== billId)
+		group.items = group.items.filter((item) => item.id !== billId)
 	}
 
 	public getTotal(): number {
@@ -334,7 +334,7 @@ class TrackerUI {
 				const content = document.createElement('div')
 				const name = document.createElement('p')
 				name.className = 'bill-name'
-				name.textContent = item.name()
+				name.textContent = item.name
 				content.appendChild(name)
 				const note = document.createElement('p')
 				note.className = 'bill-note'
@@ -347,8 +347,8 @@ class TrackerUI {
 				deleteButton.className = 'delete-button'
 				deleteButton.type = 'button'
 				deleteButton.textContent = 'Delete'
-				deleteButton.setAttribute('aria-label', `Delete ${item.name()}`)
-				deleteButton.setAttribute('data-delete-id', item.id())
+				deleteButton.setAttribute('aria-label', `Delete ${item.name}`)
+				deleteButton.setAttribute('data-delete-id', item.id)
 				deleteButton.setAttribute('data-group', group.label)
 				listItem.append(content, value, deleteButton)
 				listEl.appendChild(listItem)
