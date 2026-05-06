@@ -11,7 +11,7 @@ classDiagram
         - _id: string
         - _name: string
         - _amount: number
-        + constructor(id: string, name: string, amount: number)
+        + constructor(id: string, name: string, baseAmount: number)
         + get id(): string
         + set id(value: string)
         + get name(): string
@@ -24,51 +24,51 @@ classDiagram
 
     class Subscription {
         <<abstract>>
-        + constructor(id: string, name: string, amount: number)
+        + constructor(id: string, name: string, baseAmount: number)
     }
 
     class EntertainmentSubscription {
-        + constructor(id: string, name: string, amount: number)
+        + constructor(id: string, name: string, baseAmount: number)
         + monthlyImpact(): number
         + priority(): number
     }
 
     class ProductivitySubscription {
-        + constructor(id: string, name: string, amount: number)
+        + constructor(id: string, name: string, baseAmount: number)
         + monthlyImpact(): number
         + priority(): number
     }
 
     class Utility {
         <<abstract>>
-        + constructor(id: string, name: string, amount: number)
+        + constructor(id: string, name: string, baseAmount: number)
     }
 
     class EssentialUtility {
-        + constructor(id: string, name: string, amount: number)
+        + constructor(id: string, name: string, baseAmount: number)
         + monthlyImpact(): number
         + priority(): number
     }
 
     class NonEssentialUtility {
-        + constructor(id: string, name: string, amount: number)
+        + constructor(id: string, name: string, baseAmount: number)
         + monthlyImpact(): number
         + priority(): number
     }
 
     class Debts {
         <<abstract>>
-        + constructor(id: string, name: string, amount: number)
+        + constructor(id: string, name: string, baseAmount: number)
     }
 
     class OneTimeDebt {
-        + constructor(id: string, name: string, amount: number)
+        + constructor(id: string, name: string, baseAmount: number)
         + monthlyImpact(): number
         + priority(): number
     }
 
     class RecurringDebt {
-        + constructor(id: string, name: string, amount: number)
+        + constructor(id: string, name: string, baseAmount: number)
         + monthlyImpact(): number
         + priority(): number
     }
