@@ -409,7 +409,7 @@ Tiny bug prevention. Good stuff.
 The constructor receives:
 
 - the root HTML element
-- the bill manager
+- the bill manager  
 
 It stores both.
 

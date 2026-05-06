@@ -223,10 +223,18 @@ class TrackerUI {
 	private _root: HTMLDivElement
 	private _manager: BillManager
 	private _isBound = false
+	private _formCategory: HTMLSelectElement | null
+	private _formType: HTMLSelectElement | null
+	private _formTypeField: HTMLElement | null
+	private _formEl: HTMLFormElement | null
 
 	constructor(root: HTMLDivElement, manager: BillManager) {
 		this._root = root
 		this._manager = manager
+		this._formCategory = this._root.querySelector<HTMLSelectElement>('[data-category]')
+		this._formType = this._root.querySelector<HTMLSelectElement>('[data-type]')
+		this._formTypeField = this._root.querySelector<HTMLElement>('[data-type-field]')
+		this._formEl = this._root.querySelector<HTMLFormElement>('[data-form]')
 		this.bindEvents()
 	}
 
@@ -237,76 +245,79 @@ class TrackerUI {
 
 	private bindEvents(): void {
 		if (this._isBound) return
-		const formCategory = this._root.querySelector<HTMLSelectElement>('[data-category]')
-		const formType = this._root.querySelector<HTMLSelectElement>('[data-type]')
-		const formTypeField = this._root.querySelector<HTMLElement>('[data-type-field]')
-		const formEl = this._root.querySelector<HTMLFormElement>('[data-form]')
 
-		const syncTypeOptions = (category: string): void => {
-			if (!formType || !formTypeField) return
-
-			const hasCategory = category.length > 0
-			formTypeField.hidden = !hasCategory
-
-			Array.from(formType.options).forEach((option) => {
-				const isMatch = option.dataset.category === category
-				option.hidden = !isMatch
-				option.disabled = !isMatch
-			})
-
-			if (!hasCategory) {
-				formType.value = ''
-				return
-			}
-
-			const firstMatchingType = Array.from(formType.options).find(
-				(option) => option.dataset.category === category
-			)
-			if (firstMatchingType) {
-				formType.value = firstMatchingType.value
-			}
-		}
-
-		formCategory?.addEventListener('change', () => {
-			syncTypeOptions(formCategory.value)
-		})
+		this._formCategory?.addEventListener('change', this.onCategoryChange)
 
 		this._root.querySelectorAll<HTMLUListElement>('[data-group-list]').forEach((listEl) => {
-			listEl.addEventListener('click', (event) => {
-				const target = event.target as HTMLElement | null
-				const deleteButton = target?.closest<HTMLButtonElement>('[data-delete-id]')
-				if (!deleteButton) return
-				const billId = deleteButton.getAttribute('data-delete-id')
-				const groupLabel = deleteButton.getAttribute('data-group')
-				if (!billId || !groupLabel) return
-				this._manager.removeFromGroup(groupLabel, billId)
-				this.render()
-			})
+			listEl.addEventListener('click', this.onListClick)
 		})
 
-		formEl?.addEventListener('submit', (event) => {
-			event.preventDefault()
-			if (!formEl) return
-			const formData = new FormData(formEl)
-			const name = String(formData.get('name') ?? '').trim()
-			const category = String(formData.get('category') ?? '').trim()
-			const billType = String(formData.get('billType') ?? '').trim()
-			const amountValue = Number(formData.get('amount'))
+		this._formEl?.addEventListener('submit', this.onFormSubmit)
 
-			if (!name || !category || !billType || Number.isNaN(amountValue)) {
-				return
-			}
-
-			const bill = this._manager.createBill(category, billType, this.newId('bill'), name, amountValue)
-			this._manager.addToGroup(category, bill)
-			formEl.reset()
-			syncTypeOptions('')
-			this.render()
-		})
-
-		syncTypeOptions('')
+		this.syncTypeOptions('')
 
 		this._isBound = true
+	}
+
+	private onCategoryChange = (): void => {
+		if (!this._formCategory) return
+		this.syncTypeOptions(this._formCategory.value)
+	}
+
+	private onListClick = (event: Event): void => {
+		const target = event.target as HTMLElement | null
+		const deleteButton = target?.closest<HTMLButtonElement>('[data-delete-id]')
+		if (!deleteButton) return
+		const billId = deleteButton.getAttribute('data-delete-id')
+		const groupLabel = deleteButton.getAttribute('data-group')
+		if (!billId || !groupLabel) return
+		this._manager.removeFromGroup(groupLabel, billId)
+		this.render()
+	}
+
+	private onFormSubmit = (event: Event): void => {
+		event.preventDefault()
+		if (!this._formEl) return
+		const formData = new FormData(this._formEl)
+		const name = String(formData.get('name') ?? '').trim()
+		const category = String(formData.get('category') ?? '').trim()
+		const billType = String(formData.get('billType') ?? '').trim()
+		const amountValue = Number(formData.get('amount'))
+
+		if (!name || !category || !billType || Number.isNaN(amountValue)) {
+			return
+		}
+
+		const bill = this._manager.createBill(category, billType, this.newId('bill'), name, amountValue)
+		this._manager.addToGroup(category, bill)
+		this._formEl.reset()
+		this.syncTypeOptions('')
+		this.render()
+	}
+
+	private syncTypeOptions(category: string): void {
+		if (!this._formType || !this._formTypeField) return
+
+		const hasCategory = category.length > 0
+		this._formTypeField.hidden = !hasCategory
+
+		Array.from(this._formType.options).forEach((option) => {
+			const isMatch = option.dataset.category === category
+			option.hidden = !isMatch
+			option.disabled = !isMatch
+		})
+
+		if (!hasCategory) {
+			this._formType.value = ''
+			return
+		}
+
+		const firstMatchingType = Array.from(this._formType.options).find(
+			(option) => option.dataset.category === category
+		)
+		if (firstMatchingType) {
+			this._formType.value = firstMatchingType.value
+		}
 	}
 
 	private updateTotals(): void {
