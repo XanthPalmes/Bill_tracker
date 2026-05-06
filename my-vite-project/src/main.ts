@@ -302,7 +302,7 @@ class TrackerUI {
 		event.preventDefault()
 		if (!this._formEl) return
 		// Read values from the form fields.
-		const formData = new FormData(this._formEl)
+		const formData = new FormData(this._formEl)	
 		const name = String(formData.get('name') ?? '').trim()
 		const category = String(formData.get('category') ?? '').trim()
 		const billType = String(formData.get('billType') ?? '').trim()
