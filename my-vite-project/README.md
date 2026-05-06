@@ -17,6 +17,7 @@ classDiagram
       +amount() number
       +setAmount(amount: number) void
       +monthlyImpact() number
+      +priority() number
     }
 
     class Subscription

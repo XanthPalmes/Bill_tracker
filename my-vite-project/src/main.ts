@@ -36,6 +36,8 @@ abstract class Bill {
 	}
 
 	public abstract monthlyImpact(): number
+
+	public abstract priority(): number
 }
 
 abstract class Subscription extends Bill {
@@ -52,6 +54,10 @@ class EntertainmentSubscription extends Subscription {
 	public monthlyImpact(): number {
 		return this.amount()
 	}
+
+	public priority(): number {
+		return 2  // Entertainment: lower priority
+	}
 }
 
 class ProductivitySubscription extends Subscription {
@@ -61,6 +67,10 @@ class ProductivitySubscription extends Subscription {
 
 	public monthlyImpact(): number {
 		return this.amount()
+	}
+
+	public priority(): number {
+		return 3  // Productivity: higher priority than entertainment
 	}
 }
 
@@ -78,6 +88,10 @@ class EssentialUtility extends Utility {
 	public monthlyImpact(): number {
 		return this.amount()
 	}
+
+	public priority(): number {
+		return 5  // Essential: critical priority
+	}
 }
 
 class NonEssentialUtility extends Utility {
@@ -87,6 +101,10 @@ class NonEssentialUtility extends Utility {
 
 	public monthlyImpact(): number {
 		return this.amount()
+	}
+
+	public priority(): number {
+		return 1  // Non-essential: lowest priority
 	}
 }
 
@@ -104,6 +122,10 @@ class OneTimeDebt extends Debts {
 	public monthlyImpact(): number {
 		return this.amount()
 	}
+
+	public priority(): number {
+		return 4  // One-time debt: high priority
+	}
 }
 
 class RecurringDebt extends Debts {
@@ -113,6 +135,10 @@ class RecurringDebt extends Debts {
 
 	public monthlyImpact(): number {
 		return this.amount()
+	}
+
+	public priority(): number {
+		return 5  // Recurring debt: highest priority
 	}
 }
 
@@ -300,7 +326,8 @@ class TrackerUI {
 			const total = group.items.reduce((sum, item) => sum + item.monthlyImpact(), 0)
 			totalEl.textContent = this.money(total)
 			listEl.replaceChildren()
-			group.items.forEach((item) => {
+			const sortedItems = [...group.items].sort((a, b) => b.priority() - a.priority())
+			sortedItems.forEach((item) => {
 				const listItem = document.createElement('li')
 				const billTypeLabel = this._manager.getBillTypeLabel(item)
 				listItem.setAttribute('data-bill-type', billTypeLabel)
