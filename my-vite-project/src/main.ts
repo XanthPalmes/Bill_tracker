@@ -179,15 +179,11 @@ class BillManager {
       return billType === "ProductivitySubscription"
         ? new ProductivitySubscription(id, name, amount)
         : new EntertainmentSubscription(id, name, amount);
-    }
-
-    if (category === "Utilities") {
+    } else if (category === "Utilities") {
       return billType === "NonEssentialUtility"
         ? new NonEssentialUtility(id, name, amount)
         : new EssentialUtility(id, name, amount);
-    }
-
-    if (category === "Debts") {
+    } else if (category === "Debts") {
       return billType === "RecurringDebt"
         ? new RecurringDebt(id, name, amount)
         : new OneTimeDebt(id, name, amount);
@@ -215,7 +211,7 @@ class BillManager {
   }
 
   public getBillTypeLabel(bill: Bill): string {
-    switch (bill.constructor.name) {
+    switch (bill.name) {
       case "EntertainmentSubscription":
         return "Entertainment";
       case "ProductivitySubscription":
