@@ -120,18 +120,28 @@ class NonEssentialUtility extends Utility {
 
 //* Debt classes
 abstract class Debts extends Bill {
-  constructor(id: string, name: string, baseAmount: number) {
+  private _interestRate: number;
+
+  constructor(id: string, name: string, baseAmount: number, interestRate: number) {
     super(id, name, baseAmount);
+    this._interestRate = interestRate;  
+  }
+
+  public get interestRate(): number {
+    return this._interestRate;
+  }
+
+  public set interestRate(value: number){
+    this._interestRate = value;
   }
 }
-
 class OneTimeDebt extends Debts {
-  constructor(id: string, name: string, baseAmount: number) {
-    super(id, name, baseAmount);
+  constructor(id: string, name: string, baseAmount: number, interestRate: number) {
+    super(id, name, baseAmount, interestRate);
   }
 
   public monthlyImpact(): number {
-    return this.amount;
+    return this.amount + (this.amount * this.interestRate / 100);
   }
 
   public priority(): number {
@@ -140,12 +150,12 @@ class OneTimeDebt extends Debts {
 }
 
 class RecurringDebt extends Debts {
-  constructor(id: string, name: string, baseAmount: number) {
-    super(id, name, baseAmount);
+  constructor(id: string, name: string, baseAmount: number, interestRate: number) {
+    super(id, name, baseAmount, interestRate);
   }
 
   public monthlyImpact(): number {
-    return this.amount;
+    return this.amount + (this.amount * this.interestRate / 100);
   }
 
   public priority(): number {
@@ -173,7 +183,7 @@ class BillManager {
   }
 
   //* Methods
-   public createBill(category: string, billType: string, id: string, name: string, amount: number, billingCycle: "monthly" | "annual" = "monthly"): Bill {
+   public createBill(category: string, billType: string, id: string, name: string, amount: number, billingCycle: "monthly" | "annual" = "monthly", interestRate: number): Bill {
     if (category === "Subscriptions") {
       if (billType === "ProductivitySubscription") {
         return new ProductivitySubscription(id, name, amount, billingCycle);
@@ -190,9 +200,9 @@ class BillManager {
 
     } else if (category === "Debts") {
       if (billType === "RecurringDebt") {
-        return new RecurringDebt(id, name, amount);
+        return new RecurringDebt(id, name, amount, interestRate);
       } else {
-        return new OneTimeDebt(id, name, amount);
+        return new OneTimeDebt(id, name, amount, interestRate);
       }
     }
     return new EntertainmentSubscription(id, name, amount, billingCycle);
@@ -309,7 +319,7 @@ class TrackerUI {
     const billType = String(formData.get("billType") ?? "").trim();
     const amountValue = Number(formData.get("amount"));
     const billingCycle = (formData.get("billingCycle") as "monthly" | "annual") ?? "monthly";
-
+    const interestRate = Number(formData.get("interestRate"));
     if (!name || !category || !billType || Number.isNaN(amountValue)) {
       return;
     }
@@ -320,7 +330,8 @@ class TrackerUI {
       this.newId("bill"),
       name,
       amountValue,
-        billingCycle
+        billingCycle,
+        interestRate
     );
     this._manager.addToGroup(category, bill);
     this._formEl.reset();
