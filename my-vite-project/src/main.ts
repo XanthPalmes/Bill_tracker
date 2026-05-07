@@ -255,6 +255,7 @@ class TrackerUI {
   private _formCategory: HTMLSelectElement | null;
   private _formType: HTMLSelectElement | null;
   private _formTypeField: HTMLElement | null;
+  private _formCycleField: HTMLElement | null;
   private _formEl: HTMLFormElement | null;
 
   constructor(root: HTMLDivElement, manager: BillManager) {
@@ -265,6 +266,7 @@ class TrackerUI {
     this._formType = this._root.querySelector<HTMLSelectElement>("[data-type]");
     this._formTypeField =
       this._root.querySelector<HTMLElement>("[data-type-field]");
+    this._formCycleField = this._root.querySelector<HTMLElement>("[data-billing-cycle-field]");
     this._formEl = this._root.querySelector<HTMLFormElement>("[data-form]");
     this.bindEvents();
   }
@@ -340,10 +342,11 @@ class TrackerUI {
   };
 
   private syncTypeOptions(category: string): void {
-    if (!this._formType || !this._formTypeField) return;
+    if (!this._formType || !this._formTypeField || !this._formCycleField) return;
 
     const hasCategory = category.length > 0;
     this._formTypeField.hidden = !hasCategory;
+    this._formCycleField.hidden = category !== "Subscriptions";
 
     Array.from(this._formType.options).forEach((option) => {
       const isMatch = option.dataset.category === category;
