@@ -210,13 +210,17 @@ class BillManager {
 
   public addToGroup(label: string, bill: Bill): void {
     const group = this.groups.find((item) => item.label === label);
-    if (!group) return;
+    if (!group) {
+      return;
+    }
     group.items.push(bill);
   }
 
   public removeFromGroup(label: string, billId: string): void {
     const group = this.groups.find((item) => item.label === label);
-    if (!group) return;
+    if (!group) {
+      return;
+    }
     group.items = group.items.filter((item) => item.id !== billId);
   }
 
@@ -279,7 +283,9 @@ class TrackerUI {
 
   //* Private methods
   private bindEvents(): void {
-    if (this._isBound) return;
+    if (this._isBound) {
+      return;
+    }
 
     this._formCategory?.addEventListener("change", this.onCategoryChange);
 
@@ -297,24 +303,32 @@ class TrackerUI {
   }
 
   private onCategoryChange = (): void => {
-    if (!this._formCategory) return;
+    if (!this._formCategory) {
+      return;
+    }
     this.syncTypeOptions(this._formCategory.value);
   };
 
   private onListClick = (event: Event): void => {
     const target = event.target as HTMLElement | null;
     const deleteButton = target?.closest<HTMLButtonElement>("[data-delete-id]");
-    if (!deleteButton) return;
+    if (!deleteButton) {
+      return;
+    }
     const billId = deleteButton.getAttribute("data-delete-id");
     const groupLabel = deleteButton.getAttribute("data-group");
-    if (!billId || !groupLabel) return;
+    if (!billId || !groupLabel) {
+      return;
+    }
     this._manager.removeFromGroup(groupLabel, billId);
     this.render();
   };
 
   private onFormSubmit = (event: Event): void => {
     event.preventDefault();
-    if (!this._formEl) return;
+    if (!this._formEl) {
+      return;
+    }
     const formData = new FormData(this._formEl);
     const name = String(formData.get("name") ?? "").trim();
     const category = String(formData.get("category") ?? "").trim();
@@ -342,8 +356,9 @@ class TrackerUI {
   };
 
   private syncTypeOptions(category: string): void {
-    if (!this._formType || !this._formTypeField || !this._formCycleField) return;
-
+    if (!this._formType || !this._formTypeField || !this._formCycleField) {
+      return;
+    }
     const hasCategory = category.length > 0;
     this._formTypeField.hidden = !hasCategory;
     this._formCycleField.hidden = category !== "Subscriptions";
@@ -369,7 +384,9 @@ class TrackerUI {
 
   private updateTotals(): void {
     const totalValueEl = this._root.querySelector<HTMLElement>("[data-total]");
-    if (!totalValueEl) return;
+    if (!totalValueEl) {
+      return;
+    }
     totalValueEl.textContent = this.money(this._manager.getTotal());
   }
 
@@ -381,11 +398,15 @@ class TrackerUI {
         const totalEl = card.querySelector<HTMLElement>("[data-group-total]");
         const listEl =
           card.querySelector<HTMLUListElement>("[data-group-list]");
-        if (!label || !totalEl || !listEl) return;
+        if (!label || !totalEl || !listEl) {
+          return;
+        }
         const group = this._manager
           .getGroups()
           .find((item) => item.label === label);
-        if (!group) return;
+        if (!group) {
+          return;
+        }
         const total = group.items.reduce(
           (sum, item) => sum + item.monthlyImpact(),
           0,
@@ -449,10 +470,8 @@ const groups: CategoryGroup[] = [
   },
 ];
 
-const root = document.querySelector<HTMLDivElement>("#app");
+const root = document.querySelector<HTMLDivElement>("#app")!;
+const manager = new BillManager(groups);
+const ui = new TrackerUI(root, manager);
+ui.render();
 
-if (root) {
-  const manager = new BillManager(groups);
-  const ui = new TrackerUI(root, manager);
-  ui.render();
-}
