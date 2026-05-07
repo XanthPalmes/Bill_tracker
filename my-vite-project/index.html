@@ -79,7 +79,8 @@
                   <option value="Debts">Debts</option>
                 </select>
               </label>
-              <label data-type-field hidden>
+              <div data-type-field hidden>
+                <label>
                 Type
                 <select name="billType" data-type required>
                   <option value="EntertainmentSubscription" data-category="Subscriptions">Entertainment</option>
@@ -90,6 +91,14 @@
                   <option value="RecurringDebt" data-category="Debts">Recurring</option>
                 </select>
               </label>
+                <label>
+                  Billing Cycle
+                  <select name="billingCycle">
+                    <option value="monthly">Monthly</option>
+                    <option value="annual">Annual</option>
+                  </select>
+                </label>
+              </div>
               <button class="form-submit" type="submit">Save bill</button>
             </form>
           </section>

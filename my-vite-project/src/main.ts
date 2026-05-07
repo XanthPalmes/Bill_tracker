@@ -45,18 +45,23 @@ abstract class Bill {
 
 //* Subscription classes
 abstract class Subscription extends Bill {
-  constructor(id: string, name: string, baseAmount: number) {
+  private _billingCycle: "monthly" | "annual";
+  constructor(id: string, name: string, baseAmount: number, billingCycle: "monthly" | "annual") {
     super(id, name, baseAmount);
+    this._billingCycle = billingCycle;
+  }
+  public get billingCycle(): "monthly" | "annual" {
+    return this._billingCycle;
   }
 }
 
 class EntertainmentSubscription extends Subscription {
-  constructor(id: string, name: string, baseAmount: number) {
-    super(id, name, baseAmount);
+  constructor(id: string, name: string, baseAmount: number, billingCycle: "monthly" | "annual") {
+    super(id, name, baseAmount, billingCycle);
   }
 
   public monthlyImpact(): number {
-    return this.amount;
+    return this.billingCycle === "annual" ? this.amount / 12 : this.amount;
   }
 
   public priority(): number {
@@ -65,12 +70,12 @@ class EntertainmentSubscription extends Subscription {
 }
 
 class ProductivitySubscription extends Subscription {
-  constructor(id: string, name: string, baseAmount: number) {
-    super(id, name, baseAmount);
+  constructor(id: string, name: string, baseAmount: number, billingCycle: "monthly" | "annual") {
+    super(id, name, baseAmount, billingCycle);
   }
 
   public monthlyImpact(): number {
-    return this.amount;
+    return this.billingCycle === "annual" ? this.amount / 12 : this.amount;
   }
 
   public priority(): number {
@@ -168,12 +173,12 @@ class BillManager {
   }
 
   //* Methods
-   public createBill(category: string, billType: string, id: string, name: string, amount: number): Bill {
+   public createBill(category: string, billType: string, id: string, name: string, amount: number, billingCycle: "monthly" | "annual" = "monthly"): Bill {
     if (category === "Subscriptions") {
       if (billType === "ProductivitySubscription") {
-        return new ProductivitySubscription(id, name, amount);
+        return new ProductivitySubscription(id, name, amount, billingCycle);
       } else {
-        return new EntertainmentSubscription(id, name, amount);
+        return new EntertainmentSubscription(id, name, amount, billingCycle);
       }
 
     } else if (category === "Utilities") {
@@ -190,7 +195,7 @@ class BillManager {
         return new OneTimeDebt(id, name, amount);
       }
     }
-    return new EntertainmentSubscription(id, name, amount);
+    return new EntertainmentSubscription(id, name, amount, billingCycle);
   }
 
   public addToGroup(label: string, bill: Bill): void {
@@ -303,6 +308,7 @@ class TrackerUI {
     const category = String(formData.get("category") ?? "").trim();
     const billType = String(formData.get("billType") ?? "").trim();
     const amountValue = Number(formData.get("amount"));
+    const billingCycle = (formData.get("billingCycle") as "monthly" | "annual") ?? "monthly";
 
     if (!name || !category || !billType || Number.isNaN(amountValue)) {
       return;
@@ -314,6 +320,7 @@ class TrackerUI {
       this.newId("bill"),
       name,
       amountValue,
+        billingCycle
     );
     this._manager.addToGroup(category, bill);
     this._formEl.reset();
