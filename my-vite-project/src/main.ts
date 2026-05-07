@@ -168,27 +168,28 @@ class BillManager {
   }
 
   //* Methods
-  public createBill(
-    category: string,
-    billType: string,
-    id: string,
-    name: string,
-    amount: number,
-  ): Bill {
+   public createBill(category: string, billType: string, id: string, name: string, amount: number): Bill {
     if (category === "Subscriptions") {
-      return billType === "ProductivitySubscription"
-        ? new ProductivitySubscription(id, name, amount)
-        : new EntertainmentSubscription(id, name, amount);
-    } else if (category === "Utilities") {
-      return billType === "NonEssentialUtility"
-        ? new NonEssentialUtility(id, name, amount)
-        : new EssentialUtility(id, name, amount);
-    } else if (category === "Debts") {
-      return billType === "RecurringDebt"
-        ? new RecurringDebt(id, name, amount)
-        : new OneTimeDebt(id, name, amount);
-    }
+      if (billType === "ProductivitySubscription") {
+        return new ProductivitySubscription(id, name, amount);
+      } else {
+        return new EntertainmentSubscription(id, name, amount);
+      }
 
+    } else if (category === "Utilities") {
+      if (billType === "NonEssentialUtility") {
+        return new NonEssentialUtility(id, name, amount);
+      } else {
+        return new EssentialUtility(id, name, amount);
+      }
+
+    } else if (category === "Debts") {
+      if (billType === "RecurringDebt") {
+        return new RecurringDebt(id, name, amount);
+      } else {
+        return new OneTimeDebt(id, name, amount);
+      }
+    }
     return new EntertainmentSubscription(id, name, amount);
   }
 
@@ -225,7 +226,7 @@ class BillManager {
       case "RecurringDebt":
         return "Recurring";
       default:
-        return bill.constructor.name.replace("Bill", "");
+        return bill.name.replace("Bill", "");
     }
   }
 }
