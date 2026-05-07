@@ -7,7 +7,106 @@
     <title>Billy | Bill Tracker</title>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <main class="app" aria-label="Billy bill tracker">
+        <header class="hero">
+          <div class="hero-title">
+            <span class="hero-emoji" aria-hidden="true">💸</span>
+            <div>
+              <p class="hero-kicker">Billy</p>
+              <h1>Monthly Bill Tracker</h1>
+            </div>
+          </div>
+          <div class="hero-total">
+            <span class="hero-total-label">Monthly Expenses</span>
+            <strong class="hero-total-value" data-total>₱0.00</strong>
+          </div>
+        </header>
+
+        <div class="app-layout">
+          <section class="panel" aria-label="Bill overview">
+            <div class="panel-header">
+              <h2>Bill overview</h2>
+            </div>
+            <div class="group-grid">
+              <article class="group-card" data-group-card="Subscriptions">
+                <header class="group-header">
+                  <div class="group-title">
+                    <h3>Subscriptions</h3>
+                  </div>
+                  <span data-group-total>₱0.00</span>
+                </header>
+                <ul class="group-list" data-group-list></ul>
+              </article>
+              <article class="group-card" data-group-card="Utilities">
+                <header class="group-header">
+                  <div class="group-title">
+                    <h3>Utilities</h3>
+                  </div>
+                  <span data-group-total>₱0.00</span>
+                </header>
+                <ul class="group-list" data-group-list></ul>
+              </article>
+              <article class="group-card" data-group-card="Debts">
+                <header class="group-header">
+                  <div class="group-title">
+                    <h3>Debts</h3>
+                  </div>
+                  <span data-group-total>₱0.00</span>
+                </header>
+                <ul class="group-list" data-group-list></ul>
+              </article>
+            </div>
+          </section>
+
+          <section class="form-panel" aria-label="Add bill form">
+            <h2>Add a bill</h2>
+            <form class="bill-form" data-form>
+              <label>
+                Name
+                <input name="name" type="text" placeholder="e.g. Netflix" required />
+              </label>
+              <label>
+                Monthly Cost (₱)
+                <input name="amount" type="number" min="0" step="0.01" placeholder="0.00" required />
+              </label>
+              <label>
+                Category
+                <select name="category" data-category required>
+                  <option value="" selected disabled>Choose category</option>
+                  <option value="Subscriptions">Subscriptions</option>
+                  <option value="Utilities">Utilities</option>
+                  <option value="Debts">Debts</option>
+                </select>
+              </label>
+              <div data-type-field hidden>
+                <label>
+                Type
+                <select name="billType" data-type required>
+                  <option value="EntertainmentSubscription" data-category="Subscriptions">Entertainment</option>
+                  <option value="ProductivitySubscription" data-category="Subscriptions">Productivity</option>
+                  <option value="EssentialUtility" data-category="Utilities">Essential</option>
+                  <option value="NonEssentialUtility" data-category="Utilities">Non-essential</option>
+                  <option value="OneTimeDebt" data-category="Debts">One-time</option>
+                  <option value="RecurringDebt" data-category="Debts">Recurring</option>
+                </select>
+              </label>
+              </div>
+              <div data-billing-cycle-field hidden>
+                <label>
+                  Billing Cycle
+                  <select name="billingCycle">
+                    <option value="monthly">Monthly</option>
+                    <option value="annual">Annual</option>
+                  </select>
+                </label>
+              </div>
+              <button class="form-submit" type="submit">Save bill</button>
+            </form>
+          </section>
+        </div>
+      </main>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

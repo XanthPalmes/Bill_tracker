@@ -1,441 +1,458 @@
-import './style.css'
+import "./style.css";
 
-// Base expense model shared by all bill types.
-abstract class Expense {
-	protected readonly id: string
-	protected name: string
-	protected baseAmount: number
+abstract class Bill {
+  //* Private fields
+  private _id: string;
+  private _name: string;
+  private _amount: number;
 
-	protected constructor(id: string, name: string, baseAmount: number) {
-		this.id = id
-		this.name = name
-		this.baseAmount = baseAmount
-	}
+  constructor(id: string, name: string, baseAmount: number) {
+    this._id = id;
+    this._name = name;
+    this._amount = baseAmount;
+  }
 
-	public getId(): string {
-		return this.id
-	}
+  //* Basic getters and setters
+  public get id(): string {
+    return this._id;
+  }
 
-	public getName(): string {
-		return this.name
-	}
+  public set id(value: string) {
+    this._id = value;
+  }
 
-	public getBaseAmount(): number {
-		return this.baseAmount
-	}
+  public get name(): string {
+    return this._name;
+  }
 
-	// Each child class defines its own monthly impact math.
-	public abstract calculateMonthlyImpact(): number
+  public set name(value: string) {
+    this._name = value;
+  }
+
+  public get amount(): number {
+    return this._amount;
+  }
+
+  public set amount(value: number) {
+    this._amount = value;
+  }
+
+  //* Abstract methods
+  public abstract monthlyImpact(): number;
+
+  public abstract priority(): number;
 }
 
-// Simple bill entry that uses the base amount as the monthly impact.
-class SimpleExpense extends Expense {
-	constructor(id: string, name: string, baseAmount: number) {
-		super(id, name, baseAmount)
-	}
-
-	public calculateMonthlyImpact(): number {
-		return this.baseAmount
-	}
+//* Subscription classes
+abstract class Subscription extends Bill {
+  private _billingCycle: "monthly" | "annual";
+  constructor(id: string, name: string, baseAmount: number, billingCycle: "monthly" | "annual") {
+    super(id, name, baseAmount);
+    this._billingCycle = billingCycle;
+  }
+  public get billingCycle(): "monthly" | "annual" {
+    return this._billingCycle;
+  }
 }
 
-// Recurring subscriptions that bill on a cycle.
-abstract class RecurringSubscription extends Expense {
-	protected billingCycle: 'monthly' | 'annual'
+class EntertainmentSubscription extends Subscription {
+  constructor(id: string, name: string, baseAmount: number, billingCycle: "monthly" | "annual") {
+    super(id, name, baseAmount, billingCycle);
+  }
 
-	protected constructor(
-		id: string,
-		name: string,
-		baseAmount: number,
-		billingCycle: 'monthly' | 'annual'
-	) {
-		super(id, name, baseAmount)
-		this.billingCycle = billingCycle
-	}
+  public monthlyImpact(): number {
+    return this.billingCycle === "annual" ? this.amount / 12 : this.amount;
+  }
 
-	public getBillingCycle(): 'monthly' | 'annual' {
-		return this.billingCycle
-	}
+  public priority(): number {
+    return 2;
+  }
 }
 
-// Utilities that change by usage.
-abstract class VariableUtility extends Expense {
-	protected usageUnitLabel: string
+class ProductivitySubscription extends Subscription {
+  constructor(id: string, name: string, baseAmount: number, billingCycle: "monthly" | "annual") {
+    super(id, name, baseAmount, billingCycle);
+  }
 
-	protected constructor(
-		id: string,
-		name: string,
-		baseAmount: number,
-		usageUnitLabel: string
-	) {
-		super(id, name, baseAmount)
-		this.usageUnitLabel = usageUnitLabel
-	}
+  public monthlyImpact(): number {
+    return this.billingCycle === "annual" ? this.amount / 12 : this.amount;
+  }
 
-	public getUsageUnitLabel(): string {
-		return this.usageUnitLabel
-	}
+  public priority(): number {
+    return 3;
+  }
 }
 
-// Debts that include interest.
-abstract class DebtRepayment extends Expense {
-	protected interestRate: number
-
-	protected constructor(id: string, name: string, baseAmount: number, interestRate: number) {
-		super(id, name, baseAmount)
-		this.interestRate = interestRate
-	}
-
-	public getInterestRate(): number {
-		return this.interestRate
-	}
+//* Utility classes
+abstract class Utility extends Bill {
+  constructor(id: string, name: string, baseAmount: number) {
+    super(id, name, baseAmount);
+  }
 }
 
-// Subscription types.
-class DigitalMedia extends RecurringSubscription {
-	private familyMembersShared: number
+class EssentialUtility extends Utility {
+  constructor(id: string, name: string, baseAmount: number) {
+    super(id, name, baseAmount);
+  }
 
-	constructor(
-		id: string,
-		name: string,
-		baseAmount: number,
-		billingCycle: 'monthly' | 'annual',
-		familyMembersShared: number
-	) {
-		super(id, name, baseAmount, billingCycle)
-		this.familyMembersShared = familyMembersShared
-	}
+  public monthlyImpact(): number {
+    return this.amount;
+  }
 
-	public calculateMonthlyImpact(): number {
-		const monthlyCost = this.billingCycle === 'annual' ? this.baseAmount / 12 : this.baseAmount
-		return monthlyCost / Math.max(1, this.familyMembersShared)
-	}
+  public priority(): number {
+    return 5;
+  }
 }
 
-class SoftwareLicense extends RecurringSubscription {
-	private annualRenewalFee: number
+class NonEssentialUtility extends Utility {
+  constructor(id: string, name: string, baseAmount: number) {
+    super(id, name, baseAmount);
+  }
 
-	constructor(
-		id: string,
-		name: string,
-		baseAmount: number,
-		billingCycle: 'monthly' | 'annual',
-		annualRenewalFee: number
-	) {
-		super(id, name, baseAmount, billingCycle)
-		this.annualRenewalFee = annualRenewalFee
-	}
+  public monthlyImpact(): number {
+    return this.amount;
+  }
 
-	public calculateMonthlyImpact(): number {
-		const monthlyCost = this.billingCycle === 'annual' ? this.baseAmount / 12 : this.baseAmount
-		return monthlyCost + this.annualRenewalFee / 12
-	}
+  public priority(): number {
+    return 1;
+  }
 }
 
-// Utility types.
-class MeteredUtility extends VariableUtility {
-	private unitsUsed: number
-	private costPerUnit: number
+//* Debt classes
+abstract class Debts extends Bill {
+  private _interestRate: number;
 
-	constructor(
-		id: string,
-		name: string,
-		baseAmount: number,
-		usageUnitLabel: string,
-		unitsUsed: number,
-		costPerUnit: number
-	) {
-		super(id, name, baseAmount, usageUnitLabel)
-		this.unitsUsed = unitsUsed
-		this.costPerUnit = costPerUnit
-	}
+  constructor(id: string, name: string, baseAmount: number, interestRate: number) {
+    super(id, name, baseAmount);
+    this._interestRate = interestRate;  
+  }
 
-	public calculateMonthlyImpact(): number {
-		return this.baseAmount + this.unitsUsed * this.costPerUnit
-	}
+  public get interestRate(): number {
+    return this._interestRate;
+  }
+
+  public set interestRate(value: number){
+    this._interestRate = value;
+  }
+}
+class OneTimeDebt extends Debts {
+  constructor(id: string, name: string, baseAmount: number, interestRate: number) {
+    super(id, name, baseAmount, interestRate);
+  }
+
+  public monthlyImpact(): number {
+    return this.amount + (this.amount * this.interestRate / 100);
+  }
+
+  public priority(): number {
+    return 4;
+  }
 }
 
-class TieredUtility extends VariableUtility {
-	private dataCap: number
-	private overagePenalty: number
-	private unitsUsed: number
+class RecurringDebt extends Debts {
+  constructor(id: string, name: string, baseAmount: number, interestRate: number) {
+    super(id, name, baseAmount, interestRate);
+  }
 
-	constructor(
-		id: string,
-		name: string,
-		baseAmount: number,
-		usageUnitLabel: string,
-		dataCap: number,
-		overagePenalty: number,
-		unitsUsed: number
-	) {
-		super(id, name, baseAmount, usageUnitLabel)
-		this.dataCap = dataCap
-		this.overagePenalty = overagePenalty
-		this.unitsUsed = unitsUsed
-	}
+  public monthlyImpact(): number {
+    return this.amount + (this.amount * this.interestRate / 100);
+  }
 
-	public calculateMonthlyImpact(): number {
-		const overage = Math.max(0, this.unitsUsed - this.dataCap)
-		return this.baseAmount + overage * this.overagePenalty
-	}
-}
-
-// Debt types.
-class CreditCard extends DebtRepayment {
-	private currentBalance: number
-	private minimumPaymentPercent: number
-
-	constructor(
-		id: string,
-		name: string,
-		baseAmount: number,
-		interestRate: number,
-		currentBalance: number,
-		minimumPaymentPercent: number
-	) {
-		super(id, name, baseAmount, interestRate)
-		this.currentBalance = currentBalance
-		this.minimumPaymentPercent = minimumPaymentPercent
-	}
-
-	public calculateMonthlyImpact(): number {
-		const interest = this.currentBalance * (this.interestRate / 12)
-		const minimumPayment = this.currentBalance * this.minimumPaymentPercent
-		return this.baseAmount + interest + minimumPayment
-	}
-}
-
-class FixedLoan extends DebtRepayment {
-	private remainingTermMonths: number
-
-	constructor(
-		id: string,
-		name: string,
-		baseAmount: number,
-		interestRate: number,
-		remainingTermMonths: number
-	) {
-		super(id, name, baseAmount, interestRate)
-		this.remainingTermMonths = remainingTermMonths
-	}
-
-	public calculateMonthlyImpact(): number {
-		const interest = this.baseAmount * this.interestRate
-		return (this.baseAmount + interest) / Math.max(1, this.remainingTermMonths)
-	}
+  public priority(): number {
+    return 5;
+  }
 }
 
 type CategoryGroup = {
-	label: string
-	items: Expense[]
+  label: string;
+  items: Bill[];
+};
+
+//* Manager class
+class BillManager {
+  //* Private fields
+  private groups: CategoryGroup[];
+
+  constructor(groups: CategoryGroup[]) {
+    this.groups = groups;
+  }
+
+  //* Public methods
+  public getGroups(): CategoryGroup[] {
+    return this.groups;
+  }
+
+  //* Methods
+   public createBill(category: string, billType: string, id: string, name: string, amount: number, billingCycle: "monthly" | "annual" = "monthly", interestRate: number): Bill {
+    if (category === "Subscriptions") {
+      if (billType === "ProductivitySubscription") {
+        return new ProductivitySubscription(id, name, amount, billingCycle);
+      } else {
+        return new EntertainmentSubscription(id, name, amount, billingCycle);
+      }
+
+    } else if (category === "Utilities") {
+      if (billType === "NonEssentialUtility") {
+        return new NonEssentialUtility(id, name, amount);
+      } else {
+        return new EssentialUtility(id, name, amount);
+      }
+
+    } else if (category === "Debts") {
+      if (billType === "RecurringDebt") {
+        return new RecurringDebt(id, name, amount, interestRate);
+      } else {
+        return new OneTimeDebt(id, name, amount, interestRate);
+      }
+    }
+    return new EntertainmentSubscription(id, name, amount, billingCycle);
+  }
+
+  public addToGroup(label: string, bill: Bill): void {
+    const group = this.groups.find((item) => item.label === label);
+    if (!group) return;
+    group.items.push(bill);
+  }
+
+  public removeFromGroup(label: string, billId: string): void {
+    const group = this.groups.find((item) => item.label === label);
+    if (!group) return;
+    group.items = group.items.filter((item) => item.id !== billId);
+  }
+
+  public getTotal(): number {
+    return this.groups
+      .flatMap((group) => group.items)
+      .reduce((sum, item) => sum + item.monthlyImpact(), 0);
+  }
+
+  public getBillTypeLabel(bill: Bill): string {
+    switch (bill.name) {
+      case "EntertainmentSubscription":
+        return "Entertainment";
+      case "ProductivitySubscription":
+        return "Productivity";
+      case "EssentialUtility":
+        return "Essential";
+      case "NonEssentialUtility":
+        return "Non-essential";
+      case "OneTimeDebt":
+        return "One-time";
+      case "RecurringDebt":
+        return "Recurring";
+      default:
+        return bill.name.replace("Bill", "");
+    }
+  }
 }
 
-// Simple UI controller that renders the dashboard.
-class BillTrackerUI {
-	private readonly root: HTMLDivElement
-	private readonly groups: CategoryGroup[]
-	private closeModalHandler?: () => void
-	private readonly escapeListener: (event: KeyboardEvent) => void
+//* UI class
+class TrackerUI {
+  //* Private fields
+  private _root: HTMLDivElement;
+  private _manager: BillManager;
+  private _isBound = false;
+  private _formCategory: HTMLSelectElement | null;
+  private _formType: HTMLSelectElement | null;
+  private _formTypeField: HTMLElement | null;
+  private _formCycleField: HTMLElement | null;
+  private _formEl: HTMLFormElement | null;
 
-	constructor(root: HTMLDivElement, groups: CategoryGroup[]) {
-		this.root = root
-		this.groups = groups
-		this.escapeListener = (event: KeyboardEvent) => {
-			if (event.key === 'Escape') {
-				this.closeModalHandler?.()
-			}
-		}
-		document.addEventListener('keydown', this.escapeListener)
-	}
+  constructor(root: HTMLDivElement, manager: BillManager) {
+    this._root = root;
+    this._manager = manager;
+    this._formCategory =
+      this._root.querySelector<HTMLSelectElement>("[data-category]");
+    this._formType = this._root.querySelector<HTMLSelectElement>("[data-type]");
+    this._formTypeField =
+      this._root.querySelector<HTMLElement>("[data-type-field]");
+    this._formCycleField = this._root.querySelector<HTMLElement>("[data-billing-cycle-field]");
+    this._formEl = this._root.querySelector<HTMLFormElement>("[data-form]");
+    this.bindEvents();
+  }
 
-	public render(): void {
-		this.root.innerHTML = `
-      <main class="app" aria-label="Billy bill tracker">
-        <header class="hero">
-          <div class="hero-title">
-            <span class="hero-emoji" aria-hidden="true">💸</span>
-            <div>
-              <p class="hero-kicker">Billy</p>
-              <h1>Monthly Bill Tracker</h1>
-            </div>
-          </div>
-          <div class="hero-total">
-			<span class="hero-total-label">Monthly Expenses</span>
-            <strong class="hero-total-value">${this.formatCurrency(this.getTotal())}</strong>
-          </div>
-        </header>
+  //* Public methods
+  public render(): void {
+    this.updateTotals();
+    this.renderGroups();
+  }
 
-        <section class="panel" aria-label="Bill overview">
-          <div class="panel-header">
-            <h2>Bill overview</h2>
-						<button class="add-button add-pill" type="button" data-group="Bill overview" aria-label="Add bill">Add +</button>
-          </div>
-          <div class="group-grid">
-            ${this.groups.map((group) => this.renderGroup(group)).join('')}
-          </div>
-        </section>
-      </main>
-			<div class="modal" data-modal aria-hidden="true">
-				<div class="modal-backdrop" data-close></div>
-				<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-					<header class="modal-header">
-						<h2 id="modal-title">Add a bill</h2>
-						<button class="modal-close" type="button" data-close aria-label="Close">✕</button>
-					</header>
-					<form class="modal-form" data-form>
-						<label>
-							Bill name
-							<input name="name" type="text" placeholder="e.g. Streaming bundle" required />
-						</label>
-						<label>
-							Base amount (₱)
-							<input name="amount" type="number" min="0" step="0.01" placeholder="0.00" required />
-						</label>
-						<label>
-							Category
-							<select name="category" data-category required>
-								<option value="Subscriptions">Subscriptions</option>
-								<option value="Utilities">Utilities</option>
-								<option value="Debts">Debts</option>
-							</select>
-						</label>
-						<button class="modal-submit" type="submit">Save bill</button>
-					</form>
-				</div>
-			</div>
-    `
+  //* Private methods
+  private bindEvents(): void {
+    if (this._isBound) return;
 
-		// Lightweight click handler to confirm the add action.
-		const modal = this.root.querySelector<HTMLDivElement>('[data-modal]')
-		const modalCategory = this.root.querySelector<HTMLSelectElement>('[data-category]')
-		const modalForm = this.root.querySelector<HTMLFormElement>('[data-form]')
+    this._formCategory?.addEventListener("change", this.onCategoryChange);
 
-		const openModal = (label: string): void => {
-			if (!modal || !modalCategory) return
-			const hasOption = Array.from(modalCategory.options).some(
-				(option) => option.value === label
-			)
-			modalCategory.value = hasOption
-				? label
-				: modalCategory.options[0]?.value ?? label
-			modal.setAttribute('aria-hidden', 'false')
-			modal.classList.add('is-open')
-		}
+    this._root
+      .querySelectorAll<HTMLUListElement>("[data-group-list]")
+      .forEach((listEl) => {
+        listEl.addEventListener("click", this.onListClick);
+      });
 
-		const closeModal = (): void => {
-			if (!modal || !modalForm) return
-			modalForm.reset()
-			modal.setAttribute('aria-hidden', 'true')
-			modal.classList.remove('is-open')
-		}
+    this._formEl?.addEventListener("submit", this.onFormSubmit);
 
-		this.closeModalHandler = closeModal
+    this.syncTypeOptions("");
 
-		this.root.querySelectorAll<HTMLButtonElement>('.add-button').forEach((button) => {
-			button.addEventListener('click', () => {
-				const label = button.dataset.group ?? 'this group'
-				openModal(label)
-			})
-		})
+    this._isBound = true;
+  }
 
-		this.root.querySelectorAll<HTMLElement>('[data-close]').forEach((button) => {
-			button.addEventListener('click', closeModal)
-		})
+  private onCategoryChange = (): void => {
+    if (!this._formCategory) return;
+    this.syncTypeOptions(this._formCategory.value);
+  };
 
-		modalForm?.addEventListener('submit', (event) => {
-			event.preventDefault()
-			if (!modalForm) return
-			const formData = new FormData(modalForm)
-			const name = String(formData.get('name') ?? '').trim()
-			const category = String(formData.get('category') ?? '').trim()
-			const amountValue = Number(formData.get('amount'))
+  private onListClick = (event: Event): void => {
+    const target = event.target as HTMLElement | null;
+    const deleteButton = target?.closest<HTMLButtonElement>("[data-delete-id]");
+    if (!deleteButton) return;
+    const billId = deleteButton.getAttribute("data-delete-id");
+    const groupLabel = deleteButton.getAttribute("data-group");
+    if (!billId || !groupLabel) return;
+    this._manager.removeFromGroup(groupLabel, billId);
+    this.render();
+  };
 
-			if (!name || !category || Number.isNaN(amountValue)) {
-				return
-			}
+  private onFormSubmit = (event: Event): void => {
+    event.preventDefault();
+    if (!this._formEl) return;
+    const formData = new FormData(this._formEl);
+    const name = String(formData.get("name") ?? "").trim();
+    const category = String(formData.get("category") ?? "").trim();
+    const billType = String(formData.get("billType") ?? "").trim();
+    const amountValue = Number(formData.get("amount"));
+    const billingCycle = (formData.get("billingCycle") as "monthly" | "annual") ?? "monthly";
+    const interestRate = Number(formData.get("interestRate"));
+    if (!name || !category || !billType || Number.isNaN(amountValue)) {
+      return;
+    }
 
-			const expense = new SimpleExpense(
-				this.generateId('bill'),
-				name,
-				amountValue
-			)
-			this.addExpenseToGroup(category, expense)
-			closeModal()
-			this.render()
-		})
-	}
+    const bill = this._manager.createBill(
+      category,
+      billType,
+      this.newId("bill"),
+      name,
+      amountValue,
+        billingCycle,
+        interestRate
+    );
+    this._manager.addToGroup(category, bill);
+    this._formEl.reset();
+    this.syncTypeOptions("");
+    this.render();
+  };
 
-	private addExpenseToGroup(label: string, expense: Expense): void {
-		const group = this.groups.find((item) => item.label === label)
-		if (!group) return
-		group.items.push(expense)
-	}
+  private syncTypeOptions(category: string): void {
+    if (!this._formType || !this._formTypeField || !this._formCycleField) return;
 
-	private generateId(prefix: string): string {
-		if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-			return `${prefix}-${crypto.randomUUID()}`
-		}
-		return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
-	}
+    const hasCategory = category.length > 0;
+    this._formTypeField.hidden = !hasCategory;
+    this._formCycleField.hidden = category !== "Subscriptions";
 
-	private renderGroup(group: CategoryGroup): string {
-		const total = group.items.reduce((sum, item) => sum + item.calculateMonthlyImpact(), 0)
-		return `
-      <article class="group-card">
-        <header class="group-header">
-					<div class="group-title">
-						<h3>${group.label}</h3>
-					</div>
-					<span>${this.formatCurrency(total)}</span>
-        </header>
-        <ul class="group-list">
-          ${group.items
-				.map(
-					(item) => `
-            <li>
-              <div>
-                <p class="bill-name">${item.getName()}</p>
-              </div>
-              <span class="bill-value">${this.formatCurrency(item.calculateMonthlyImpact())}</span>
-            </li>
-          `
-				)
-				.join('')}
-        </ul>
-      </article>
-    `
-	}
+    Array.from(this._formType.options).forEach((option) => {
+      const isMatch = option.dataset.category === category;
+      option.hidden = !isMatch;
+      option.disabled = !isMatch;
+    });
 
-	private getTotal(): number {
-		return this.groups
-			.flatMap((group) => group.items)
-			.reduce((sum, item) => sum + item.calculateMonthlyImpact(), 0)
-	}
+    if (!hasCategory) {
+      this._formType.value = "";
+      return;
+    }
 
-	private formatCurrency(value: number): string {
-		return `₱${value.toFixed(2)}`
-	}
+    const firstMatchingType = Array.from(this._formType.options).find(
+      (option) => option.dataset.category === category,
+    );
+    if (firstMatchingType) {
+      this._formType.value = firstMatchingType.value;
+    }
+  }
+
+  private updateTotals(): void {
+    const totalValueEl = this._root.querySelector<HTMLElement>("[data-total]");
+    if (!totalValueEl) return;
+    totalValueEl.textContent = this.money(this._manager.getTotal());
+  }
+
+  private renderGroups(): void {
+    this._root
+      .querySelectorAll<HTMLElement>("[data-group-card]")
+      .forEach((card) => {
+        const label = card.getAttribute("data-group-card") ?? "";
+        const totalEl = card.querySelector<HTMLElement>("[data-group-total]");
+        const listEl =
+          card.querySelector<HTMLUListElement>("[data-group-list]");
+        if (!label || !totalEl || !listEl) return;
+        const group = this._manager
+          .getGroups()
+          .find((item) => item.label === label);
+        if (!group) return;
+        const total = group.items.reduce(
+          (sum, item) => sum + item.monthlyImpact(),
+          0,
+        );
+        totalEl.textContent = this.money(total);
+        listEl.replaceChildren();
+        const sortedItems = [...group.items].sort(
+          (a, b) => b.priority() - a.priority(),
+        );
+        sortedItems.forEach((item) => {
+          const listItem = document.createElement("li");
+          const billTypeLabel = this._manager.getBillTypeLabel(item);
+          listItem.setAttribute("data-bill-type", billTypeLabel);
+          const content = document.createElement("div");
+          const name = document.createElement("p");
+          name.className = "bill-name";
+          name.textContent = item.name;
+          content.appendChild(name);
+          const note = document.createElement("p");
+          note.className = "bill-note";
+          note.textContent = billTypeLabel;
+          content.appendChild(note);
+          const value = document.createElement("span");
+          value.className = "bill-value";
+          value.textContent = this.money(item.monthlyImpact());
+          const deleteButton = document.createElement("button");
+          deleteButton.className = "delete-button";
+          deleteButton.type = "button";
+          deleteButton.textContent = "Delete";
+          deleteButton.setAttribute("aria-label", `Delete ${item.name}`);
+          deleteButton.setAttribute("data-delete-id", item.id);
+          deleteButton.setAttribute("data-group", group.label);
+          listItem.append(content, value, deleteButton);
+          listEl.appendChild(listItem);
+        });
+      });
+  }
+
+  private newId(prefix: string): string {
+    return `${prefix}-${crypto.randomUUID()}`;
+  }
+
+  private money(value: number): string {
+    return `₱${value.toFixed(2)}`;
+  }
 }
 
+//* Initialization
 const groups: CategoryGroup[] = [
-	{
-		label: 'Subscriptions',
-		items: []
-	},
-	{
-		label: 'Utilities',
-		items: []
-	},
-	{
-		label: 'Debts',
-		items: []
-	}
-]
+  {
+    label: "Subscriptions",
+    items: [],
+  },
+  {
+    label: "Utilities",
+    items: [],
+  },
+  {
+    label: "Debts",
+    items: [],
+  },
+];
 
-const root = document.querySelector<HTMLDivElement>('#app')
+const root = document.querySelector<HTMLDivElement>("#app");
 
 if (root) {
-	const ui = new BillTrackerUI(root, groups)
-	ui.render()
+  const manager = new BillManager(groups);
+  const ui = new TrackerUI(root, manager);
+  ui.render();
 }
