@@ -17,10 +17,19 @@
               <h1>Monthly Bill Tracker</h1>
             </div>
           </div>
-          <div class="hero-total">
-            <span class="hero-total-label">Monthly Expenses</span>
-            <strong class="hero-total-value" data-total>₱0.00</strong>
-          </div>
+             <div class="hero-stats">
+            <div class="hero-total">
+              <span class="hero-total-label">Monthly Expenses</span>
+              <strong class="hero-total-value" data-total>₱0.00</strong>
+            </div>
+            <div class="hero-total">
+              <span class="hero-total-label">Total Budget</span>
+              <strong class="hero-total-value" data-total-budget>₱0.00</strong>
+            </div>
+            <div class="hero-total">
+              <span class="hero-total-label">Remaining Balance</span>
+              <strong class="hero-total-value" data-remaining>₱0.00</strong>
+            </div>
         </header>
 
         <div class="app-layout">
@@ -31,8 +40,13 @@
             <div class="group-grid">
               <article class="group-card" data-group-card="Subscriptions">
                 <header class="group-header">
-                  <div class="group-title">
-                    <h3>Subscriptions</h3>
+                  <div>
+                    <div class="group-title">
+                      <h3>Subscriptions</h3>
+                    </div>
+                    <div class="group-budget" style="font-size: 0.85rem; margin-top: 4px;">
+                      Allocated: <span data-group-budget="Subscriptions" style="color: var(--muted); transition: color 0.3s;">₱0.00</span>
+                    </div>
                   </div>
                   <span data-group-total>₱0.00</span>
                 </header>
@@ -40,8 +54,13 @@
               </article>
               <article class="group-card" data-group-card="Utilities">
                 <header class="group-header">
-                  <div class="group-title">
-                    <h3>Utilities</h3>
+                  <div>
+                    <div class="group-title">
+                      <h3>Utilities</h3>
+                    </div>
+                    <div class="group-budget" style="font-size: 0.85rem; margin-top: 4px;">
+                      Allocated: <span data-group-budget="Utilities" style="color: var(--muted); transition: color 0.3s;">₱0.00</span>
+                    </div>
                   </div>
                   <span data-group-total>₱0.00</span>
                 </header>
@@ -49,8 +68,13 @@
               </article>
               <article class="group-card" data-group-card="Debts">
                 <header class="group-header">
-                  <div class="group-title">
-                    <h3>Debts</h3>
+                  <div>
+                    <div class="group-title">
+                      <h3>Debts</h3>
+                    </div>
+                    <div class="group-budget" style="font-size: 0.85rem; margin-top: 4px;">
+                      Allocated: <span data-group-budget="Debts" style="color: var(--muted); transition: color 0.3s;">₱0.00</span>
+                    </div>
                   </div>
                   <span data-group-total>₱0.00</span>
                 </header>
@@ -59,6 +83,33 @@
             </div>
           </section>
 
+
+           <section class="form-panel" aria-label="Set budgets">
+            <h2>Set Your Budget</h2>
+            <p id="budget-error" style="color: red; font-size: 0.9rem; display: none; margin-bottom: 12px; font-weight: 600;">
+              Error: Sum of allocations exceeds Total Budget!
+            </p>
+            <form class="bill-form" data-budget-form>
+              <label>
+                Total Budget (₱)
+                <input name="totalBudget" type="number" min="0" step="0.01" placeholder="0.00" required />
+              </label>
+              <label>
+                Subscriptions Allocation (₱)
+                <input name="subBudget" data-budget-input="Subscriptions" type="number" min="0" step="0.01" placeholder="0.00" required />
+              </label>
+              <label>
+                Utilities Allocation (₱)
+                <input name="utilBudget" data-budget-input="Utilities" type="number" min="0" step="0.01" placeholder="0.00" required />
+              </label>
+              <label>
+                Debts Allocation (₱)
+                <input name="debtBudget" data-budget-input="Debts" type="number" min="0" step="0.01" placeholder="0.00" required />
+              </label>
+              <button class="form-submit" type="submit">Save Budgets</button>
+            </form>
+          </section>
+          
           <section class="form-panel" aria-label="Add bill form">
             <h2>Add a bill</h2>
             <form class="bill-form" data-form>
