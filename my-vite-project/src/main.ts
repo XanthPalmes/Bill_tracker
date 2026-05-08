@@ -126,11 +126,13 @@ abstract class Debt extends Bill {
   }
 
   public set interestRate(value: number){
-    if (value < 0) {
-      throw new Error("Interest rate cannot be negative");
-    } else {
-      this._interestRate = value;
-    }
+    this._interestRate = value;
+  }
+}
+
+class OneTimeDebt extends Debts {
+  constructor(id: string, name: string, baseAmount: number, interestRate: number) {
+    super(id, name, baseAmount, interestRate);
   }
 
   public monthlyImpact(): number {
@@ -166,6 +168,12 @@ type CategoryGroup = {
 class BillManager {
   // NOTE: Private fields
   private groups: CategoryGroup[];
+  private _totalBudget: number = 0;
+  private _categoryBudgets: Record<string, number> = {
+    "Subscriptions": 0,
+    "Utilities": 0,
+    "Debts": 0,
+  };
 
   constructor(groups: CategoryGroup[]) {
     this.groups = groups;
@@ -176,17 +184,25 @@ class BillManager {
     return this.groups;
   }
 
-  // NOTE: Methods
-   public createBill(
-    billType: string, 
-    id: string, 
-    name: string, 
-    amount: number, 
-    billingCycle: "monthly" | "annual" = "monthly", 
-    interestRate: number
-  ): Bill {
-    switch (billType) {
-      case "ProductivitySubscription":
+  public setBudgets(total: number, subs: number, utils: number, debts: number): void {
+    this._totalBudget = total;
+    this._categoryBudgets["Subscriptions"] = subs;
+    this._categoryBudgets["Utilities"] = utils;
+    this._categoryBudgets["Debts"] = debts;
+  }
+
+  public get totalBudget(): number {
+    return this._totalBudget;
+  }
+
+  public getCategoryBudget(category: string): number {
+    return this._categoryBudgets[category] || 0;
+  }
+
+  //* Methods
+   public createBill(category: string, billType: string, id: string, name: string, amount: number, billingCycle: "monthly" | "annual" = "monthly", interestRate: number): Bill {
+    if (category === "Subscriptions") {
+      if (billType === "ProductivitySubscription") {
         return new ProductivitySubscription(id, name, amount, billingCycle);
       case "EntertainmentSubscription":
         return new EntertainmentSubscription(id, name, amount, billingCycle);
@@ -222,6 +238,25 @@ class BillManager {
       .flatMap((group) => group.items)
       .reduce((sum, item) => sum + item.monthlyImpact(), 0);
   }
+
+  public getBillTypeLabel(bill: Bill): string {
+    switch (bill.constructor.name) {
+      case "EntertainmentSubscription":
+        return "Entertainment";
+      case "ProductivitySubscription":
+        return "Productivity";
+      case "EssentialUtility":
+        return "Essential";
+      case "NonEssentialUtility":
+        return "Non-essential";
+      case "OneTimeDebt":
+        return "One-time";
+      case "RecurringDebt":
+        return "Recurring";
+      default:
+        return bill.name.replace("Bill", "");
+    }
+  }
 }
 
 // NOTE: UI class
@@ -235,6 +270,10 @@ class TrackerUI {
   private _formTypeField: HTMLElement | null;
   private _formCycleField: HTMLElement | null;
   private _formEl: HTMLFormElement | null;
+  private _budgetFormEl: HTMLFormElement | null;
+  private _budgetErrorEl: HTMLElement | null;
+  private _totalBudgetEl: HTMLElement | null;
+  private _remainingEl: HTMLElement | null;
 
   constructor(root: HTMLDivElement, manager: BillManager) {
     this._root = root;
@@ -246,6 +285,10 @@ class TrackerUI {
       this._root.querySelector<HTMLElement>("[data-type-field]");
     this._formCycleField = this._root.querySelector<HTMLElement>("[data-billing-cycle-field]");
     this._formEl = this._root.querySelector<HTMLFormElement>("[data-form]");
+    this._budgetFormEl = this._root.querySelector<HTMLFormElement>("[data-budget-form]");
+    this._budgetErrorEl = this._root.querySelector<HTMLElement>("#budget-error");
+    this._totalBudgetEl = this._root.querySelector<HTMLElement>("[data-total-budget]");
+    this._remainingEl = this._root.querySelector<HTMLElement>("[data-remaining]");
     this.bindEvents();
   }
 
@@ -271,10 +314,33 @@ class TrackerUI {
 
     this._formEl?.addEventListener("submit", this.onFormSubmit);
 
+    this._budgetFormEl?.addEventListener("submit", this.onBudgetSubmit);
+
     this.syncTypeOptions("");
 
     this._isBound = true;
   }
+
+  private onBudgetSubmit = (event: Event): void => {
+    event.preventDefault();
+    if (!this._budgetFormEl) return;
+
+    const formData = new FormData(this._budgetFormEl);
+    const total = Number(formData.get("totalBudget"));
+    const subs = Number(formData.get("subBudget"));
+    const utils = Number(formData.get("utilBudget"));
+    const debts = Number(formData.get("debtBudget"));
+
+    if (subs + utils + debts > total) {
+      if (this._budgetErrorEl) this._budgetErrorEl.style.display = "block";
+      return;
+    }
+
+    if (this._budgetErrorEl) this._budgetErrorEl.style.display = "none";
+
+    this._manager.setBudgets(total, subs, utils, debts);
+    this.render();
+  };
 
   private onCategoryChange = (): void => {
     if (!this._formCategory) {
@@ -357,10 +423,26 @@ class TrackerUI {
 
   private updateTotals(): void {
     const totalValueEl = this._root.querySelector<HTMLElement>("[data-total]");
-    if (!totalValueEl) {
-      return;
+    const totalExp = this._manager.getTotal();
+    const totalBudg = this._manager.totalBudget;
+    const remaining = totalBudg - totalExp;
+
+    if (totalValueEl) {
+      totalValueEl.textContent = this.money(totalExp);
     }
-    totalValueEl.textContent = this.money(this._manager.getTotal());
+
+    if (this._totalBudgetEl) {
+      this._totalBudgetEl.textContent = this.money(totalBudg);
+    }
+
+    if (this._remainingEl) {
+      this._remainingEl.textContent = this.money(remaining);
+
+      if (remaining < 0) {
+        this._remainingEl.style.color = remaining < 0 ? "#dc2626" : "inherit";
+        this._remainingEl.style.fontWeight = remaining < 0 ? "700" : "500";
+      }
+    }
   }
 
   private renderGroups(): void {
@@ -385,6 +467,22 @@ class TrackerUI {
           0,
         );
         totalEl.textContent = this.money(total);
+
+        const budgetVal = this._manager.getCategoryBudget(label);
+        const budgetDisplayEl = card.querySelector<HTMLElement>(`[data-group-budget="${label}"]`);
+
+        if (budgetDisplayEl) {
+          budgetDisplayEl.textContent = this.money(budgetVal);
+
+          if (total > budgetVal && budgetVal > 0) {
+            budgetDisplayEl.style.color = "#dc2626";
+            budgetDisplayEl.style.fontWeight = "bold";
+          } else {
+            budgetDisplayEl.style.color = "var(--muted)";
+            budgetDisplayEl.style.fontWeight = "normal";
+          }
+        }
+
         listEl.replaceChildren();
         const sortedItems = [...group.items].sort(
           (a, b) => b.priority() - a.priority(),
