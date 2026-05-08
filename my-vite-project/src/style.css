@@ -473,25 +473,3 @@ body {
     align-items: center;
   }
 }
-
-.app-layout {
-
-  grid-template-columns: minmax(0, 1.65fr) minmax(320px, 360px);
-}
-
-.app-layout > *:not(.panel) {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.hero-stats {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.hero-stats > .hero-total {
-  flex: 1;
-  min-width: 160px;
-}
