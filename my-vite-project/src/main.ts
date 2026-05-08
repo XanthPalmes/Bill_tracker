@@ -135,6 +135,7 @@ abstract class Debts extends Bill {
     this._interestRate = value;
   }
 }
+
 class OneTimeDebt extends Debts {
   constructor(id: string, name: string, baseAmount: number, interestRate: number) {
     super(id, name, baseAmount, interestRate);
