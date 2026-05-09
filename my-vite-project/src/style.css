@@ -83,6 +83,14 @@ body {
   animation: float-in 0.6s ease-out;
 }
 
+.sidebar-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  position: sticky;
+  top: 24px;
+}
+
 .app-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.65fr) 360px;
@@ -175,7 +183,7 @@ body {
   width: 100%;
   min-width: 0;
   height: fit-content;
-  position: sticky;
+  /* position: sticky; */
   top: 32px;
 }
 
@@ -494,4 +502,10 @@ body {
 .hero-stats > .hero-total {
   flex: 1;
   min-width: 160px;
+}
+
+.left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }

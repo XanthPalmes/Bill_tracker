@@ -17,7 +17,7 @@
               <h1>Monthly Bill Tracker</h1>
             </div>
           </div>
-             <div class="hero-stats">
+             <div class="hero-stats"></div>
             <div class="hero-total">
               <span class="hero-total-label">Monthly Expenses</span>
               <strong class="hero-total-value" data-total>₱0.00</strong>
@@ -33,7 +33,8 @@
         </header>
 
         <div class="app-layout">
-          <section class="panel" aria-label="Bill overview">
+          <div class="left-column">
+            <section class="panel" aria-label="Bill overview">
             <div class="panel-header">
               <h2>Bill overview</h2>
             </div>
@@ -81,10 +82,10 @@
                 <ul class="group-list" data-group-list></ul>
               </article>
             </div>
-          </section>
-
-
-           <section class="form-panel" aria-label="Set budgets">
+            </section>
+          </div>
+          <aside class="right-column" aria-label="Forms">
+            <section class="form-panel" aria-label="Set budgets">
             <h2>Set Your Budget</h2>
             <p id="budget-error" style="color: red; font-size: 0.9rem; display: none; margin-bottom: 12px; font-weight: 600;">
               Error: Sum of allocations exceeds Total Budget!
@@ -108,9 +109,9 @@
               </label>
               <button class="form-submit" type="submit">Save Budgets</button>
             </form>
-          </section>
-          
-          <section class="form-panel" aria-label="Add bill form">
+            </section>
+            
+            <section class="form-panel" aria-label="Add bill form">
             <h2>Add a bill</h2>
             <form class="bill-form" data-form>
               <label>
@@ -154,7 +155,8 @@
               </div>
               <button class="form-submit" type="submit">Save bill</button>
             </form>
-          </section>
+            </section>
+          </aside>
         </div>
       </main>
     </div>
