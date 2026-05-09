@@ -217,20 +217,8 @@ class CategoryGroup {
     this.label = label;
   }
 
-  public addBill(bill: Bill): void {
-    this.items.push(bill);
-  }
-
-  public removeBill(billId: string): void {
-    this.items = this.items.filter((item) => item.id !== billId);
-  }
-
   public getTotalMonthlyImpact(): number {
     return this.items.reduce((sum, item) => sum + item.monthlyImpact(), 0);
-  }
-
-  public isOverBudget(budget: number): boolean {
-    return this.getTotalMonthlyImpact() > budget;
   }
 
   public findDuplicate(name: string): Bill | null {
