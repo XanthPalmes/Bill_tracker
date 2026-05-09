@@ -243,6 +243,25 @@ class BillManager {
       .flatMap((group) => group.items)
       .reduce((sum, item) => sum + item.monthlyImpact(), 0);
   }
+  
+  public getBillTypeLabel(bill: Bill): string {
+    switch (bill.constructor.name) {
+      case "EntertainmentSubscription":
+        return "Entertainment";
+      case "ProductivitySubscription":
+        return "Productivity";
+      case "EssentialUtility":
+        return "Essential";
+      case "NonEssentialUtility":
+        return "Non-essential";
+      case "OneTimeDebt":
+        return "One-time";
+      case "RecurringDebt":
+        return "Recurring";
+      default:
+        return bill.name.replace("Bill", "");
+    }
+  }
 }
 
 // NOTE: UI class
@@ -329,10 +348,9 @@ class TrackerUI {
   };
 
   private onCategoryChange = (): void => {
-    if (!this._formCategory) {
-      return;
+    if (this._formCategory) {
+      this.syncTypeOptions(this._formCategory.value);
     }
-    this.syncTypeOptions(this._formCategory.value);
   };
 
   private onListClick = (event: Event): void => {
@@ -355,6 +373,7 @@ class TrackerUI {
     if (!this._formEl) {
       return;
     }
+
     const formData = new FormData(this._formEl);
     const name = String(formData.get("name") ?? "").trim();
     const category = String(formData.get("category") ?? "").trim();
@@ -409,21 +428,21 @@ class TrackerUI {
 
   private updateTotals(): void {
     const totalValueEl = this._root.querySelector<HTMLElement>("[data-total]");
-       const totalExp = this._manager.getTotal();
+    const totalExp = this._manager.getTotal();
     const totalBudg = this._manager.totalBudget;
     const remaining = totalBudg - totalExp;
 
     if (totalValueEl) {
       totalValueEl.textContent = this.money(totalExp);
     }
-
+    
     if (this._totalBudgetEl) {
       this._totalBudgetEl.textContent = this.money(totalBudg);
     }
-
+    
     if (this._remainingEl) {
       this._remainingEl.textContent = this.money(remaining);
-
+      
       if (remaining < 0) {
         this._remainingEl.style.color = remaining < 0 ? "#dc2626" : "inherit";
         this._remainingEl.style.fontWeight = remaining < 0 ? "700" : "500";
