@@ -61,7 +61,7 @@ abstract class Subscription extends Bill {
   }
 
   public monthlyImpact(): number {
-    return this.billingCycle === "annual" ? this.amount / 12 : this.amount;
+    return this.billingCycle === "annual" ? this.amount * 12 : this.amount;
   }
 }
 
@@ -476,6 +476,10 @@ class TrackerUI {
         sortedItems.forEach((item) => {
           const listItem = document.createElement("li");
           const billTypeLabel = item.getBillTypeLabel();
+          let cycleIndicator = "";
+          if (item instanceof Subscription) {
+            cycleIndicator = ` (${item.billingCycle === "annual" ? "Annual" : "Monthly"})`;
+          }
           listItem.setAttribute("data-bill-type", billTypeLabel);
           const content = document.createElement("div");
           const name = document.createElement("p");
@@ -484,7 +488,7 @@ class TrackerUI {
           content.appendChild(name);
           const note = document.createElement("p");
           note.className = "bill-note";
-          note.textContent = billTypeLabel;
+          note.textContent = `${billTypeLabel}${cycleIndicator}`;
           content.appendChild(note);
           const value = document.createElement("span");
           value.className = "bill-value";
