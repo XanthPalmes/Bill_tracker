@@ -536,6 +536,7 @@ class TrackerUI {
     }
 
     this._manager.setBudgets(total, subs, utils, debts);
+    this._budgetFormEl.reset();
     this.render();
   };
 
