@@ -17,22 +17,37 @@
               <h1>Monthly Bill Tracker</h1>
             </div>
           </div>
-          <div class="hero-total">
-            <span class="hero-total-label">Monthly Expenses</span>
-            <strong class="hero-total-value" data-total>₱0.00</strong>
-          </div>
+             <div class="hero-stats"></div>
+            <div class="hero-total">
+              <span class="hero-total-label">Monthly Expenses</span>
+              <strong class="hero-total-value" data-total>₱0.00</strong>
+            </div>
+            <div class="hero-total">
+              <span class="hero-total-label">Total Budget</span>
+              <strong class="hero-total-value" data-total-budget>₱0.00</strong>
+            </div>
+            <div class="hero-total">
+              <span class="hero-total-label">Remaining Balance</span>
+              <strong class="hero-total-value" data-remaining>₱0.00</strong>
+            </div>
         </header>
 
         <div class="app-layout">
-          <section class="panel" aria-label="Bill overview">
+          <div class="left-column">
+            <section class="panel" aria-label="Bill overview">
             <div class="panel-header">
-              <h2>Bill overview</h2>
+              <h2>Bill Overview</h2>
             </div>
             <div class="group-grid">
               <article class="group-card" data-group-card="Subscriptions">
                 <header class="group-header">
-                  <div class="group-title">
-                    <h3>Subscriptions</h3>
+                  <div>
+                    <div class="group-title">
+                      <h3>Subscriptions</h3>
+                    </div>
+                    <div class="group-budget" style="font-size: 0.85rem; margin-top: 4px;">
+                      Allocated: <span data-group-budget="Subscriptions" style="color: var(--muted); transition: color 0.3s;">₱0.00</span>
+                    </div>
                   </div>
                   <span data-group-total>₱0.00</span>
                 </header>
@@ -40,8 +55,13 @@
               </article>
               <article class="group-card" data-group-card="Utilities">
                 <header class="group-header">
-                  <div class="group-title">
-                    <h3>Utilities</h3>
+                  <div>
+                    <div class="group-title">
+                      <h3>Utilities</h3>
+                    </div>
+                    <div class="group-budget" style="font-size: 0.85rem; margin-top: 4px;">
+                      Allocated: <span data-group-budget="Utilities" style="color: var(--muted); transition: color 0.3s;">₱0.00</span>
+                    </div>
                   </div>
                   <span data-group-total>₱0.00</span>
                 </header>
@@ -49,18 +69,67 @@
               </article>
               <article class="group-card" data-group-card="Debts">
                 <header class="group-header">
-                  <div class="group-title">
-                    <h3>Debts</h3>
+                  <div>
+                    <div class="group-title">
+                      <h3>Debts</h3>
+                    </div>
+                    <div class="group-budget" style="font-size: 0.85rem; margin-top: 4px;">
+                      Allocated: <span data-group-budget="Debts" style="color: var(--muted); transition: color 0.3s;">₱0.00</span>
+                    </div>
                   </div>
                   <span data-group-total>₱0.00</span>
                 </header>
                 <ul class="group-list" data-group-list></ul>
               </article>
             </div>
-          </section>
+            </section>
 
-          <section class="form-panel" aria-label="Add bill form">
-            <h2>Add a bill</h2>
+            <section class="panel history-panel" aria-label="Bill history" style="margin-top: 24px;">
+              <div class="history-header">
+                <h2>Recently Added</h2>
+                <button class="clear-history-btn" aria-label="Clear history" data-clear-history-btn>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 6h18"></path>
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                  </svg>
+                </button>
+              </div>
+                <ul class="history-list" data-history-list>
+                  <li class="history-empty">No bills added yet. </li>
+                </ul>
+            </section>
+            
+          </div>
+          <aside class="right-column" aria-label="Forms">
+            <section class="form-panel" aria-label="Set budgets">
+            <h2>Set Your Budget</h2>
+            <p id="budget-error" style="color: red; font-size: 0.9rem; display: none; margin-bottom: 12px; font-weight: 600;">
+              Error: Sum of allocations exceeds Total Budget!
+            </p>
+            <form class="bill-form" data-budget-form>
+              <label>
+                Total Budget (₱)
+                <input name="totalBudget" type="number" min="0" step="0.01" placeholder="0.00" required />
+              </label>
+              <label>
+                Subscriptions Allocation (₱)
+                <input name="subBudget" data-budget-input="Subscriptions" type="number" min="0" step="0.01" placeholder="0.00" required />
+              </label>
+              <label>
+                Utilities Allocation (₱)
+                <input name="utilBudget" data-budget-input="Utilities" type="number" min="0" step="0.01" placeholder="0.00" required />
+              </label>
+              <label>
+                Debts Allocation (₱)
+                <input name="debtBudget" data-budget-input="Debts" type="number" min="0" step="0.01" placeholder="0.00" required />
+              </label>
+              <button class="form-submit" type="submit">Save Budgets</button>
+            </form>
+            </section>
+            
+            <section class="form-panel" aria-label="Add bill form">
+            <h2>Add A Bill</h2>
             <form class="bill-form" data-form>
               <label>
                 Name
@@ -101,9 +170,27 @@
                   </select>
                 </label>
               </div>
+              <div data-interest-rate-field hidden>
+                <label>
+                  Interest Rate (%)
+                    <input name="interestRate" type="number" min="0" step="0" placeholder="0" value="0"/>
+                </label>
+              </div>
               <button class="form-submit" type="submit">Save bill</button>
             </form>
-          </section>
+            </section>
+          </aside>
+        </div>
+
+        <div class="alert-modal" id="duplicate-alert">
+          <div class="alert-box">
+            <p class="alert-text"></p>
+            <div class="alert-buttons">
+              <button class="alert-btn" id="alert-cancel">Cancel</button>
+              <button class="alert-btn alert-btn--secondary" id="alert-update">Update</button>
+              <button class="alert-btn alert-btn--primary" id="alert-add-anyway">Add Anyway</button>
+            </div>
+          </div>
         </div>
       </main>
     </div>
