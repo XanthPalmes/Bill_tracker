@@ -133,6 +133,11 @@ abstract class Debt extends Bill {
 }
 
 class OneTimeDebt extends Debt {
+  
+  public override monthlyImpact(): number {
+    return this.amount;
+  }
+  
   public priority(): number { 
     return 4; 
   }
