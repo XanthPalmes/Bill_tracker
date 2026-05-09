@@ -7,6 +7,8 @@ abstract class Bill {
 
   constructor(id: string, name: string, baseAmount: number) {
     this._id = id;
+    this.validateName(name);
+    this.validateAmount(baseAmount);
     this._name = name;
     this._amount = baseAmount;
   }
@@ -23,18 +25,33 @@ abstract class Bill {
     return this._amount; 
   }
 
-  public set name(value: string) {
-    if (!value || value.trim().length === 0) {
-      throw new Error("Name cannot be empty");
-    }
-    this._name = value;
+  public update(name: string, amount: number): void {
+    this.validateName(name);
+    this.validateAmount(amount);
+    this._name = name;
+    this._amount = amount;
   }
 
-  public set amount(value: number) {
-    if (value < 0) {
+  public isValid(): boolean {
+    try {
+      this.validateName(this._name);
+      this.validateAmount(this._amount);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private validateName(name: string): void {
+    if (!name || name.trim().length === 0) {
+      throw new Error("Name is required");
+    }
+  }
+
+  private validateAmount(amount: number): void {
+    if (amount < 0) {
       throw new Error("Amount cannot be negative");
     }
-    this._amount = value;
   }
 
   public abstract monthlyImpact(): number;
@@ -43,20 +60,32 @@ abstract class Bill {
 }
 
 // NOTE: Subscriptions
-abstract class Subscription extends Bill {
-  private _billingCycle: "monthly" | "annual";
-  
-  constructor(id: string, name: string, baseAmount: number, billingCycle: "monthly" | "annual") {
-    super(id, name, baseAmount);
-    this._billingCycle = billingCycle;
+abstract class Subscription extends Bill {  
+  private _cycle: "monthly" | "annual";
+
+  constructor(id: string, name: string, amount: number, cycle: "monthly" | "annual") {
+    super(id, name, amount);
+    this._cycle = cycle;
   }
   
-  public get billingCycle(): "monthly" | "annual" { 
-    return this._billingCycle; 
+  public get cycle(): "monthly" | "annual" { 
+    return this._cycle; 
+  }
+
+  public changeCycle(newCycle: "monthly" | "annual"): void {
+    this._cycle = newCycle;
+  }
+
+  public switchToAnnual(): void {
+    this.changeCycle("annual");
+  }
+
+  public switchToMonthly(): void {
+    this.changeCycle("monthly");
   }
 
   public monthlyImpact(): number {
-    return this.billingCycle === "annual" ? this.amount * 12 : this.amount;
+    return this._cycle === "annual" ? this.amount * 12 : this.amount;
   }
 }
 
@@ -82,8 +111,23 @@ class ProductivitySubscription extends Subscription {
 
 // NOTE: Utilities
 abstract class Utility extends Bill {
-  public monthlyImpact(): number { 
-    return this.amount; 
+  private _isEstimated: boolean;
+
+  constructor(id: string, name: string, amount: number, isEstimated: boolean = false) {
+    super(id, name, amount);
+    this._isEstimated = isEstimated;
+  }
+
+  public get isEstimated(): boolean { 
+    return this._isEstimated; 
+  }
+
+  public getEstimatedBuffer(): number {
+    return this._isEstimated ? this.amount * 0.1 : 0;
+  }
+
+  public monthlyImpact(): number {
+    return this._isEstimated ? this.amount * 1.1 : this.amount;
   }
 }
 
@@ -113,6 +157,7 @@ abstract class Debt extends Bill {
 
   constructor(id: string, name: string, baseAmount: number, interestRate: number) {
     super(id, name, baseAmount);
+    this.validateRate(interestRate);
     this._interestRate = interestRate;  
   }
 
@@ -120,11 +165,19 @@ abstract class Debt extends Bill {
     return this._interestRate; 
   }
 
-  public set interestRate(value: number){
-    if (value < 0) {
+  public updateInterestRate(newRate: number): void {
+    this.validateRate(newRate);
+    this._interestRate = newRate;
+  }
+
+  public calculateTotalWithInterest(): number {
+    return this.amount + (this.amount * this.interestRate / 100);
+  }
+
+  private validateRate(rate: number): void {
+    if (rate < 0) {
       throw new Error("Interest rate cannot be negative");
     }
-    this._interestRate = value;
   }
 
   public monthlyImpact(): number {
@@ -133,7 +186,6 @@ abstract class Debt extends Bill {
 }
 
 class OneTimeDebt extends Debt {
-  
   public override monthlyImpact(): number {
     return this.amount;
   }
@@ -157,10 +209,35 @@ class RecurringDebt extends Debt {
   }
 }
 
-type CategoryGroup = { 
-  label: string; 
-  items: Bill[] 
-};
+class CategoryGroup {
+  public label: string;
+  public items: Bill[] = [];
+
+  constructor(label: string) {
+    this.label = label;
+  }
+
+  public addBill(bill: Bill): void {
+    this.items.push(bill);
+  }
+
+  public removeBill(billId: string): void {
+    this.items = this.items.filter((item) => item.id !== billId);
+  }
+
+  public getTotalMonthlyImpact(): number {
+    return this.items.reduce((sum, item) => sum + item.monthlyImpact(), 0);
+  }
+
+  public isOverBudget(budget: number): boolean {
+    return this.getTotalMonthlyImpact() > budget;
+  }
+
+  public findDuplicate(name: string): Bill | null {
+    const normalized = name.trim().toLowerCase();
+    return this.items.find((item) => item.name.trim().toLowerCase() === normalized) ?? null;
+  }
+}
 
 // NOTE: Manager class
 class BillManager {
@@ -189,8 +266,7 @@ class BillManager {
     return this._categoryBudgets[category] || 0;
   }
 
-  // NOTE: Methods
-   public createBill(
+  public createBill(
     billType: string, 
     id: string, 
     name: string, 
@@ -231,9 +307,7 @@ class BillManager {
   }
 
   public getTotal(): number {
-    return this._groups
-      .flatMap((group) => group.items)
-      .reduce((sum, item) => sum + item.monthlyImpact(), 0);
+    return this._groups.reduce((sum, group) => sum + group.getTotalMonthlyImpact(), 0);
   }
 
   public findDuplicate(name: string): Bill | null {
@@ -285,7 +359,6 @@ interface HistoryEntry {
   type: string;
 }
 
-// NOTE: UI class
 class TrackerUI {
   private _root: HTMLDivElement;
   private _manager: BillManager;
@@ -493,17 +566,17 @@ class TrackerUI {
     if (!name || !category || !billType || Number.isNaN(amountValue)) {
       return;
     }
-
+    
+    const bill = this._manager.createBill(billType, this.newId("bill"), name, amountValue, billingCycle, interestRate);
     const duplicate = this._manager.findDuplicate(name);
+
     if (duplicate) {
       this._duplicateBillId = duplicate.id;
-      const bill = this._manager.createBill(billType, this.newId("bill"), name, amountValue, billingCycle, interestRate);
       this._manager.setPendingBill(bill, category);
       this.showDuplicateAlert(duplicate, name);
       return;
     }
 
-    const bill = this._manager.createBill(billType, this.newId("bill"), name, amountValue, billingCycle, interestRate);
     this._manager.addToGroup(category, bill);
     this._history.unshift({
       name: bill.name,
@@ -585,10 +658,7 @@ class TrackerUI {
           return;
         }
 
-        const total = group.items.reduce(
-          (sum, item) => sum + item.monthlyImpact(),
-          0,
-        );
+        const total = group.getTotalMonthlyImpact();
 
         totalEl.textContent = this.money(total);
 
@@ -616,7 +686,7 @@ class TrackerUI {
           const billTypeLabel = item.getBillTypeLabel();
           let cycleIndicator = "";
           if (item instanceof Subscription) {
-            cycleIndicator = ` (${item.billingCycle === "annual" ? "Annual" : "Monthly"})`;
+            cycleIndicator = ` (${item.cycle === "annual" ? "Annual" : "Monthly"})`;
           }
           listItem.setAttribute("data-bill-type", billTypeLabel);
           const content = document.createElement("div");
@@ -655,18 +725,9 @@ class TrackerUI {
 
 // NOTE: Initialization
 const groups: CategoryGroup[] = [
-  { 
-    label: "Subscriptions", 
-    items: [] 
-  },
-  { 
-    label: "Utilities", 
-    items: [] 
-  },
-  { 
-    label: "Debts", 
-    items: [] 
-  },
+  new CategoryGroup("Subscriptions"),
+  new CategoryGroup("Utilities"),
+  new CategoryGroup("Debts"),
 ];
 
 const manager = new BillManager(groups);
