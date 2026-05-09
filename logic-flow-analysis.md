@@ -140,41 +140,34 @@ User adds $500 recurring debt with 10% interest
 
 **Key Methods and Their Logic**:
 
-1. **`addBill(bill)`**: Adds a bill to the group
-   - Simple operation: just pushes the bill into the items array
-   - Used during creation
-
-2. **`removeBill(billId)`**: Removes a bill by ID
-   - Uses filter to create a new array without the matching bill
-   - Effectively deletes from the group
-
-3. **`getTotalMonthlyImpact()`**: Calculates total cost for the group
+1. **`getTotalMonthlyImpact()`**: Calculates total cost for the group
    - Uses reduce to sum all bills' monthlyImpact() values
    - Purpose: Show total spending in each category
    - Example: All subscriptions together = $50/month
 
-4. **`isOverBudget(budget)`**: Checks if group exceeds its budget
-   - Compares getTotalMonthlyImpact() against a budget amount
-   - Used for visual indicators (red color, bold text)
-
-5. **`findDuplicate(name)`**: Detects duplicate bill names
+2. **`findDuplicate(name)`**: Detects duplicate bill names
    - Case-insensitive search for matching bill names
    - Purpose: Prevent user from adding the same bill twice accidentally
    - Returns the bill if found, null otherwise
+
+**Note**: The `items` array is managed directly by BillManager (`addToGroup` and `removeFromGroup` methods) rather than through dedicated CategoryGroup methods. This keeps CategoryGroup focused on calculation and lookup operations.
 
 **Example: How CategoryGroup Handles a Day's Work**:
 ```
 Start of day: CategoryGroup("Subscriptions") created with empty items
 
 User adds Netflix ($15/month)
-→ addBill(netflix) → items = [Netflix]
+→ BillManager.addToGroup("Subscriptions", netflix)
+→ items = [Netflix]
 
 User adds Spotify ($10/month)
-→ addBill(spotify) → items = [Netflix, Spotify]
+→ BillManager.addToGroup("Subscriptions", spotify)
+→ items = [Netflix, Spotify]
 
-User checks budget for subscriptions (budget = $30)
+User checks total spending for subscriptions
 → getTotalMonthlyImpact() = 15 + 10 = $25
-→ isOverBudget(30) = false ✓
+→ UI compares $25 against subscription budget ($30)
+→ Budget display shows normal color (under budget) ✓
 
 User tries to add Netflix again
 → findDuplicate("Netflix") finds Netflix
@@ -505,11 +498,15 @@ User clicks "Delete" on Netflix bill
       - RETURN (don't save)
 3. Save all budgets using manager.setBudgets()
 4. Hide error message
-5. Re-render UI with new budget information
+5. Reset budget form (clear input fields)
+6. Re-render UI with new budget information
 ```
 
 **Why validation matters?**
 If user sets $100 total but subscriptions+utilities+debts = $150, it's impossible. We catch this early.
+
+**Form Reset**:
+After successfully saving budgets, the form is cleared (same pattern as bill submission) to provide a clean state for entering new budget values. This improves UX by giving users visual confirmation of a successful submission.
 
 **Example**:
 ```
@@ -529,6 +526,8 @@ User corrects to:
 - Debts: $100
 → Sum = 500 ≤ 500 ✓
 → Budgets saved
+→ Form fields cleared
+→ UI updates to show new budget information
 ```
 
 ---
