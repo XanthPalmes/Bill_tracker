@@ -1,7 +1,6 @@
 import "./style.css";
 
 abstract class Bill {
-  // NOTE: Private fields
   private _id: string;
   private _name: string;
   private _amount: number;
@@ -12,42 +11,30 @@ abstract class Bill {
     this._amount = baseAmount;
   }
 
-  // NOTE: Basic getters and setters
-  public get id(): string {
-    return this._id;
-  }
-
-  public get name(): string {
-    return this._name;
-  }
-
-  public get amount(): number {
-    return this._amount;
-  }
+  public get id(): string { return this._id; }
+  public get name(): string { return this._name; }
+  public get amount(): number { return this._amount; }
 
   public set name(value: string) {
     if (!value || value.trim().length === 0) {
       throw new Error("Name cannot be empty");
-    } else {
-      this._name = value;
     }
+    this._name = value;
   }
 
   public set amount(value: number) {
     if (value < 0) {
       throw new Error("Amount cannot be negative");
-    } else {
-      this._amount = value;
     }
+    this._amount = value;
   }
 
-  // NOTE: Abstract methods
   public abstract monthlyImpact(): number;
   public abstract priority(): number;
   public abstract getBillTypeLabel(): string;
 }
 
-// NOTE: Subscription classes
+// NOTE: Subscriptions
 abstract class Subscription extends Bill {
   private _billingCycle: "monthly" | "annual";
   
@@ -56,9 +43,7 @@ abstract class Subscription extends Bill {
     this._billingCycle = billingCycle;
   }
   
-  public get billingCycle(): "monthly" | "annual" {
-    return this._billingCycle;
-  }
+  public get billingCycle(): "monthly" | "annual" { return this._billingCycle; }
 
   public monthlyImpact(): number {
     return this.billingCycle === "annual" ? this.amount * 12 : this.amount;
@@ -66,53 +51,31 @@ abstract class Subscription extends Bill {
 }
 
 class EntertainmentSubscription extends Subscription {
-  public priority(): number {
-    return 2;
-  }
-
-  public getBillTypeLabel(): string {
-    return "Entertainment";
-  }
+  public priority(): number { return 2; }
+  public getBillTypeLabel(): string { return "Entertainment"; }
 }
 
 class ProductivitySubscription extends Subscription {
-  public priority(): number {
-    return 3;
-  }
-
-  public getBillTypeLabel(): string {
-    return "Productivity";
-  }
+  public priority(): number { return 3; }
+  public getBillTypeLabel(): string { return "Productivity"; }
 }
 
-// NOTE: Utility classes
+// NOTE: Utilities
 abstract class Utility extends Bill {
-  public monthlyImpact(): number {
-    return this.amount;
-  }
+  public monthlyImpact(): number { return this.amount; }
 }
 
 class EssentialUtility extends Utility {
-  public priority(): number {
-    return 5;
-  }
-
-  public getBillTypeLabel(): string {
-    return "Essential";
-  }
+  public priority(): number { return 5; }
+  public getBillTypeLabel(): string { return "Essential"; }
 }
 
 class NonEssentialUtility extends Utility {
-  public priority(): number {
-    return 1;
-  }
-
-  public getBillTypeLabel(): string {
-    return "Non-essential";
-  }
+  public priority(): number { return 1; }
+  public getBillTypeLabel(): string { return "Non-essential"; }
 }
 
-// NOTE: Debt classes
+// NOTE: Debt
 abstract class Debt extends Bill {
   private _interestRate: number;
 
@@ -121,9 +84,7 @@ abstract class Debt extends Bill {
     this._interestRate = interestRate;  
   }
 
-  public get interestRate(): number {
-    return this._interestRate;
-  }
+  public get interestRate(): number { return this._interestRate; }
 
   public set interestRate(value: number){
     if (value < 0) {
@@ -137,34 +98,21 @@ abstract class Debt extends Bill {
     return this.amount + (this.amount * this.interestRate / 100);
   }
 }
-class OneTimeDebt extends Debt {
-  public priority(): number {
-    return 4;
-  }
 
-  public getBillTypeLabel(): string {
-    return "One-time";
-  }
+class OneTimeDebt extends Debt {
+  public priority(): number { return 4; }
+  public getBillTypeLabel(): string { return "One-time"; }
 }
 
 class RecurringDebt extends Debt {
-  public priority(): number {
-    return 5;
-  }
-
-  public getBillTypeLabel(): string {
-    return "Recurring";
-  }
+  public priority(): number { return 5; }
+  public getBillTypeLabel(): string { return "Recurring"; }
 }
 
-type CategoryGroup = {
-  label: string;
-  items: Bill[];
-};
+type CategoryGroup = { label: string; items: Bill[] };
 
 // NOTE: Manager class
 class BillManager {
-  // NOTE: Private fields
   private groups: CategoryGroup[];
   private _totalBudget: number = 0;
   private _categoryBudgets: Record<string, number> = {
@@ -177,10 +125,7 @@ class BillManager {
     this.groups = groups;
   }
 
-  // NOTE: Public methods
-  public getGroups(): CategoryGroup[] {
-    return this.groups;
-  }
+  public getGroups(): CategoryGroup[] { return this.groups; }
 
   public setBudgets(total: number, subs: number, utils: number, debts: number): void {
     this._totalBudget = total;
@@ -226,9 +171,7 @@ class BillManager {
 
   public addToGroup(label: string, bill: Bill): void {
     const group = this.groups.find((item) => item.label === label);
-    if (group) {
-      group.items.push(bill);
-    }
+    if (group) group.items.push(bill);
   }
 
   public removeFromGroup(label: string, billId: string): void {
@@ -266,7 +209,6 @@ class BillManager {
 
 // NOTE: UI class
 class TrackerUI {
-  // NOTE: Private fields
   private _root: HTMLDivElement;
   private _manager: BillManager;
   private _isBound = false;
@@ -283,11 +225,9 @@ class TrackerUI {
   constructor(root: HTMLDivElement, manager: BillManager) {
     this._root = root;
     this._manager = manager;
-    this._formCategory =
-      this._root.querySelector<HTMLSelectElement>("[data-category]");
+    this._formCategory = this._root.querySelector<HTMLSelectElement>("[data-category]");
     this._formType = this._root.querySelector<HTMLSelectElement>("[data-type]");
-    this._formTypeField =
-      this._root.querySelector<HTMLElement>("[data-type-field]");
+    this._formTypeField = this._root.querySelector<HTMLElement>("[data-type-field]");
     this._formCycleField = this._root.querySelector<HTMLElement>("[data-billing-cycle-field]");
     this._formEl = this._root.querySelector<HTMLFormElement>("[data-form]");
     this._budgetFormEl = this._root.querySelector<HTMLFormElement>("[data-budget-form]");
@@ -297,32 +237,22 @@ class TrackerUI {
     this.bindEvents();
   }
 
-  // NOTE: Public methods
   public render(): void {
     this.updateTotals();
     this.renderGroups();
   }
 
-  // NOTE: Private methods
   private bindEvents(): void {
-    if (this._isBound) {
-      return;
-    }
-
+    if (this._isBound) return;
     this._formCategory?.addEventListener("change", this.onCategoryChange);
-
-    this._root
-      .querySelectorAll<HTMLUListElement>("[data-group-list]")
-      .forEach((listEl) => {
-        listEl.addEventListener("click", this.onListClick);
-      });
-
+    this._root.querySelectorAll<HTMLUListElement>("[data-group-list]").forEach((listEl) => {
+      listEl.addEventListener("click", this.onListClick);
+    });
     this._formEl?.addEventListener("submit", this.onFormSubmit);
     
     this._budgetFormEl?.addEventListener("submit", this.onBudgetSubmit);
 
     this.syncTypeOptions("");
-
     this._isBound = true;
   }
 
@@ -356,16 +286,13 @@ class TrackerUI {
   private onListClick = (event: Event): void => {
     const target = event.target as HTMLElement | null;
     const deleteButton = target?.closest<HTMLButtonElement>("[data-delete-id]");
-    if (!deleteButton) {
-      return;
-    }
+    if (!deleteButton) return;
     const billId = deleteButton.getAttribute("data-delete-id");
     const groupLabel = deleteButton.getAttribute("data-group");
-    if (!billId || !groupLabel) {
-      return;
+    if (billId && groupLabel) {
+      this._manager.removeFromGroup(groupLabel, billId);
+      this.render();
     }
-    this._manager.removeFromGroup(groupLabel, billId);
-    this.render();
   };
 
   private onFormSubmit = (event: Event): void => {
@@ -381,18 +308,10 @@ class TrackerUI {
     const amountValue = Number(formData.get("amount"));
     const billingCycle = (formData.get("billingCycle") as "monthly" | "annual") ?? "monthly";
     const interestRate = Number(formData.get("interestRate"));
-    if (!name || !category || !billType || Number.isNaN(amountValue)) {
-      return;
-    }
 
-    const bill = this._manager.createBill(
-      billType,
-      this.newId("bill"),
-      name,
-      amountValue,
-        billingCycle,
-        interestRate
-    );
+    if (!name || !category || !billType || Number.isNaN(amountValue)) return;
+
+    const bill = this._manager.createBill(billType, this.newId("bill"), name, amountValue, billingCycle, interestRate);
     this._manager.addToGroup(category, bill);
     this._formEl.reset();
     this.syncTypeOptions("");
@@ -400,9 +319,7 @@ class TrackerUI {
   };
 
   private syncTypeOptions(category: string): void {
-    if (!this._formType || !this._formTypeField || !this._formCycleField) {
-      return;
-    }
+    if (!this._formType || !this._formTypeField || !this._formCycleField) return;
     const hasCategory = category.length > 0;
     this._formTypeField.hidden = !hasCategory;
     this._formCycleField.hidden = category !== "Subscriptions";
@@ -415,14 +332,9 @@ class TrackerUI {
 
     if (!hasCategory) {
       this._formType.value = "";
-      return;
-    }
-
-    const firstMatchingType = Array.from(this._formType.options).find(
-      (option) => option.dataset.category === category,
-    );
-    if (firstMatchingType) {
-      this._formType.value = firstMatchingType.value;
+    } else {
+      const firstMatch = Array.from(this._formType.options).find((opt) => opt.dataset.category === category);
+      if (firstMatch) this._formType.value = firstMatch.value;
     }
   }
 
@@ -525,32 +437,16 @@ class TrackerUI {
       });
   }
 
-  private newId(prefix: string): string {
-    return `${prefix}-${crypto.randomUUID()}`;
-  }
-
-  private money(value: number): string {
-    return `₱${value.toFixed(2)}`;
-  }
+  private newId(prefix: string): string { return `${prefix}-${crypto.randomUUID()}`; }
+  private money(value: number): string { return `₱${value.toFixed(2)}`; }
 }
 
 // NOTE: Initialization
 const groups: CategoryGroup[] = [
-  {
-    label: "Subscriptions",
-    items: [],
-  },
-  {
-    label: "Utilities",
-    items: [],
-  },
-  {
-    label: "Debts",
-    items: [],
-  },
+  { label: "Subscriptions", items: [] },
+  { label: "Utilities", items: [] },
+  { label: "Debts", items: [] },
 ];
 
-const root = document.querySelector<HTMLDivElement>("#app")!;
 const manager = new BillManager(groups);
-const ui = new TrackerUI(root, manager);
-ui.render();
+new TrackerUI(document.querySelector<HTMLDivElement>("#app")!, manager).render();
