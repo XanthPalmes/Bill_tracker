@@ -597,6 +597,36 @@ body {
   position: static;
 }
 
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.clear-history-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  color: var(--muted);
+  transition: background 0.2s ease, color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clear-history-btn:hover {
+  background: var(--surface);
+  color: #dc2626;
+}
+
+.clear-history-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
 .history-list {
   list-style: none;
   padding: 0;

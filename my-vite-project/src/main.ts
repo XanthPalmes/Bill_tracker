@@ -376,6 +376,7 @@ class TrackerUI {
   private _duplicateBillId: string | null = null;
   private _history: HistoryEntry[] = [];
   private _historyListEl: HTMLElement | null;
+  private _clearHistoryBtn: HTMLButtonElement | null;
 
   constructor(root: HTMLDivElement, manager: BillManager) {
     this._root = root;
@@ -391,6 +392,7 @@ class TrackerUI {
     this._totalBudgetEl = this._root.querySelector<HTMLElement>("[data-total-budget]");
     this._remainingEl = this._root.querySelector<HTMLElement>("[data-remaining]");
     this._historyListEl = this._root.querySelector<HTMLElement>("[data-history-list]");
+    this._clearHistoryBtn = this._root.querySelector<HTMLButtonElement>("[data-clear-history-btn]");
     this.bindEvents();
   }
 
@@ -480,6 +482,11 @@ class TrackerUI {
         this.render();
       }
     });
+
+    // Clear history functionality
+    this._clearHistoryBtn?.addEventListener("click", () => {
+      this.clearHistory();
+    });
   }
 
   private showDuplicateAlert(existingBill: Bill, newName: string): void {
@@ -499,6 +506,11 @@ class TrackerUI {
     if (modal) {
       modal.classList.remove("active");
     }
+  }
+
+  private clearHistory(): void {
+    this._history = [];
+    this.renderHistory();
   }
 
    private onBudgetSubmit = (event: Event): void => {
