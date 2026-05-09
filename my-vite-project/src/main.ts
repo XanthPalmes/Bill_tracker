@@ -159,27 +159,21 @@ type CategoryGroup = {
 
 // NOTE: Manager class
 class BillManager {
-  private groups: CategoryGroup[];
+  private _groups: CategoryGroup[];
   private _totalBudget: number = 0;
   private _categoryBudgets: Record<string, number> = {
     "Subscriptions": 0,
     "Utilities": 0,
     "Debts": 0,
   };
+  private _pendingBill: { bill: Bill; category: string; } | null = null;
 
   constructor(groups: CategoryGroup[]) {
-    this.groups = groups;
+    this._groups = groups;
   }
 
   public getGroups(): CategoryGroup[] { 
-    return this.groups; 
-  }
-
-  public setBudgets(total: number, subs: number, utils: number, debts: number): void {
-    this._totalBudget = total;
-    this._categoryBudgets["Subscriptions"] = subs;
-    this._categoryBudgets["Utilities"] = utils;
-    this._categoryBudgets["Debts"] = debts;
+    return this._groups; 
   }
 
   public get totalBudget(): number {
@@ -218,42 +212,49 @@ class BillManager {
   }
 
   public addToGroup(label: string, bill: Bill): void {
-    const group = this.groups.find((item) => item.label === label);
+    const group = this._groups.find((item) => item.label === label);
     if (group) {
       group.items.push(bill);
     }
   }
 
   public removeFromGroup(label: string, billId: string): void {
-    const group = this.groups.find((item) => item.label === label);
+    const group = this._groups.find((item) => item.label === label);
     if (group) {
       group.items = group.items.filter((item) => item.id !== billId);
     }
   }
 
   public getTotal(): number {
-    return this.groups
+    return this._groups
       .flatMap((group) => group.items)
       .reduce((sum, item) => sum + item.monthlyImpact(), 0);
   }
-  
-  public getBillTypeLabel(bill: Bill): string {
-    switch (bill.constructor.name) {
-      case "EntertainmentSubscription":
-        return "Entertainment";
-      case "ProductivitySubscription":
-        return "Productivity";
-      case "EssentialUtility":
-        return "Essential";
-      case "NonEssentialUtility":
-        return "Non-essential";
-      case "OneTimeDebt":
-        return "One-time";
-      case "RecurringDebt":
-        return "Recurring";
-      default:
-        return bill.name.replace("Bill", "");
-    }
+
+  public findDuplicate(name: string): Bill | null {
+    const normalized = name.trim().toLowerCase();
+    return this._groups
+      .flatMap((group) => group.items)
+      .find((item) => item.name.trim().toLowerCase() === normalized) ?? null;    
+  }
+
+  public getPendingBill(): { bill: Bill; category: string; } | null {
+    return this._pendingBill;
+  }
+
+  public setBudgets(total: number, subs: number, utils: number, debts: number): void {
+    this._totalBudget = total;
+    this._categoryBudgets["Subscriptions"] = subs;
+    this._categoryBudgets["Utilities"] = utils;
+    this._categoryBudgets["Debts"] = debts;
+  }
+
+  public setPendingBill(bill: Bill, category: string): void {
+    this._pendingBill = { bill, category };
+  }
+
+  public clearPendingBill(): void {
+    this._pendingBill = null;
   }
 }
 
@@ -305,6 +306,51 @@ class TrackerUI {
     this._budgetFormEl?.addEventListener("submit", this.onBudgetSubmit);
     this.syncTypeOptions("");
     this._isBound = true;
+
+    document.getElementById("alert-cancel")?.addEventListener("click", () => {
+      this._manager.clearPendingBill();
+      this.hideDuplicateAlert();
+    });
+
+    document.getElementById("alert-add-anyway")?.addEventListener("click", () => {
+      const pending = this._manager.getPendingBill();
+      if (pending) {
+        this._manager.addToGroup(pending.category, pending.bill);
+        this._manager.clearPendingBill();
+        this.hideDuplicateAlert();
+        if (this._formEl) {
+          this._formEl.reset();
+          this.syncTypeOptions("");
+        }
+        this.render();
+      }
+    });
+    
+    document.querySelector(".alert-modal")?.addEventListener("click", (e) => {
+      if (e.target === document.querySelector(".alert-modal")) {
+        this._manager.clearPendingBill();
+        this.hideDuplicateAlert();
+      }
+    });
+  }
+
+  private showDuplicateAlert(existingBill: Bill, newName: string): void {
+    const modal = document.querySelector(".alert-modal") as HTMLElement;
+    const textEl = document.querySelector(".alert-text") as HTMLElement;
+  
+    if (modal && textEl) {
+      const existingType = existingBill.getBillTypeLabel();
+      const existingAmount = this.money(existingBill.monthlyImpact());
+      textEl.textContent = `A bill named "${existingBill.name}" already exists (${existingType} - ${existingAmount}/month). Do you still want to add "${newName}"?`;
+      modal.classList.add("active");
+    }
+  }
+  
+  private hideDuplicateAlert(): void {
+    const modal = document.querySelector(".alert-modal") as HTMLElement;
+    if (modal) {
+      modal.classList.remove("active");
+    }
   }
 
    private onBudgetSubmit = (event: Event): void => {
@@ -373,6 +419,14 @@ class TrackerUI {
       return;
     }
 
+    const duplicate = this._manager.findDuplicate(name);
+    if (duplicate) {
+      const bill = this._manager.createBill(billType, this.newId("bill"), name, amountValue, billingCycle, interestRate);
+      this._manager.setPendingBill(bill, category);
+      this.showDuplicateAlert(duplicate, name);
+      return;
+    }
+
     const bill = this._manager.createBill(billType, this.newId("bill"), name, amountValue, billingCycle, interestRate);
     this._manager.addToGroup(category, bill);
     this._formEl.reset();
@@ -413,9 +467,11 @@ class TrackerUI {
 
     if (totalValueEl) {
       totalValueEl.textContent = this.money(totalExp);
-    } else if (this._totalBudgetEl) {
+    } 
+    if (this._totalBudgetEl) {
       this._totalBudgetEl.textContent = this.money(totalBudg);
-    } else if (this._remainingEl) {
+    } 
+    if (this._remainingEl) {
       this._remainingEl.textContent = this.money(remaining);
       
       if (remaining < 0) {
