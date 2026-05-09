@@ -56,7 +56,7 @@ abstract class Subscription extends Bill {
   }
 
   public monthlyImpact(): number {
-    return this.billingCycle === "annual" ? this.amount * 12 : this.amount;
+    return this.billingCycle === "annual" ? this.amount / 12 : this.amount;
   }
 }
 
