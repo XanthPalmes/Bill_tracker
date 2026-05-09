@@ -20,8 +20,8 @@ This document explains the logic, purpose, and contribution of each function and
 
 The Bill Tracker is built using a **three-layer architecture**:
 
-1. **Data Layer** (Bill hierarchy): Represents different types of bills with their properties and calculations
-2. **Business Logic Layer** (BillManager, CategoryGroup): Manages bill data, validates, and coordinates operations
+1. **Data Layer** (Bill hierarchy): Represents different types of bills with their properties and polymorphic calculations
+2. **Business Logic Layer** (BillManager, CategoryGroup): Manages bill data, validates budgets, and coordinates operations
 3. **Presentation Layer** (TrackerUI): Displays data to users and handles interactions
 
 This separation allows each layer to have clear responsibilities and makes the code maintainable.
@@ -36,7 +36,8 @@ This separation allows each layer to have clear responsibilities and makes the c
 
 **Key Responsibilities**:
 - Store common bill properties (id, name, amount)
-- Provide validation for names and amounts
+- Validate name (not empty) and amount (not negative) at construction time
+- Provide static ID generation via `Bill.generateId()`
 - Define abstract methods that subclasses must implement:
   - `monthlyImpact()`: How much this bill costs per month
   - `priority()`: Importance ranking (used for sorting)
@@ -45,14 +46,26 @@ This separation allows each layer to have clear responsibilities and makes the c
 **How it works**:
 ```
 Bill (abstract)
-├── Validates name (not empty)
-├── Validates amount (not negative)
+├── Validates name (not empty) and amount (not negative) in constructor
 ├── Provides getters for id, name, amount
-├── Provides update() method to modify bills
+├── Provides static Bill.generateId() for ID generation
 └── Defines abstract methods for subclasses
 ```
 
-The validation happens in the constructor, ensuring no invalid bill can ever be created. The `update()` method lets users edit existing bills while maintaining validation.
+**Note**: Validation happens in the constructor, ensuring no invalid bill can ever be created. There is no `update()` method — bills are immutable once created. To "update" a bill, the user deletes the old one and adds a new one.
+
+---
+
+### Static Factory: `Bill.generateId()`
+
+**Purpose**: Generate unique IDs for bills using `crypto.randomUUID()`.
+
+**Logic**:
+```
+Bill.generateId("bill") → "bill-<uuid>"
+```
+
+**Why in the domain layer?** ID generation is a domain concern, not a UI concern. Keeping it as a static method on `Bill` ensures it's owned by the domain model, not scattered across UI event handlers.
 
 ---
 
@@ -61,7 +74,6 @@ The validation happens in the constructor, ensuring no invalid bill can ever be 
 **Abstract `Subscription` class**:
 - Extends Bill to add billing cycle (monthly or annual)
 - Key logic: `monthlyImpact()` divides annual subscriptions by 12 to show monthly cost
-- Provides `changeCycle()`, `switchToAnnual()`, `switchToMonthly()` methods to toggle between cycles
 
 **Why this matters**: Entertainment and productivity subscriptions might charge annually but need to be shown as monthly expenses for budget planning.
 
@@ -76,6 +88,8 @@ User creates ProductivitySubscription for $120/year
 → Budget calculations use $10 for monthly planning
 ```
 
+**Note**: All subscriptions are created with "monthly" billing cycle by the factory. Cycle switching is not yet implemented — if a user wants to change a subscription from monthly to annual, they delete the old bill and add a new one.
+
 ---
 
 ### Utility Classes - Essential and Non-Essential Utilities
@@ -83,8 +97,7 @@ User creates ProductivitySubscription for $120/year
 **Abstract `Utility` class**:
 - Extends Bill to add estimated cost tracking
 - Key logic: If `isEstimated` is true, adds 10% buffer to amount as protection
-- `getEstimatedBuffer()`: Returns the protection amount
-- `monthlyImpact()`: Returns amount with buffer if estimated
+- `monthlyImpact()`: Returns amount with 10% buffer if estimated
 
 **Why this matters**: Utility bills often come with estimates. The 10% buffer ensures users don't run out of money if the actual bill is higher.
 
@@ -106,31 +119,31 @@ User adds estimated electricity bill of $100
 
 **Abstract `Debt` class**:
 - Extends Bill to add interest rate calculation
-- Key logic: `calculateTotalWithInterest()` adds interest to principal
-- `monthlyImpact()`: Returns principal + interest
+- Key logic: `monthlyImpact()` returns principal plus interest
+- Exposes `_interestRate` via read-only getter (updates not yet implemented)
 
 **Concrete subclasses**:
 - `OneTimeDebt`: Priority 4, one-time payment (doesn't include interest in monthly impact)
 - `RecurringDebt`: Priority 5 (highest), recurring payment with interest
 
 **Why subclasses differ**:
-- OneTimeDebt overrides `monthlyImpact()` to return just the amount (not interest) since it's a one-time payment
+- OneTimeDebt overrides `monthlyImpact()` to return just the principal (not interest) since it's a one-time payment
 - RecurringDebt uses inherited `monthlyImpact()` which includes interest calculation
 
 **Example flow**:
 ```
 User adds $1000 one-time debt with 5% interest
-→ calculateTotalWithInterest() = $1000 + $50 = $1050
-→ monthlyImpact() = $1000 (just the principal, no interest)
-→ Interest is tracked separately
+→ monthlyImpact() = $1000 (just the principal)
+→ Interest is tracked in the data but not factored into monthly impact
 
 vs.
 
 User adds $500 recurring debt with 10% interest
-→ calculateTotalWithInterest() = $500 + $50 = $550
 → monthlyImpact() = $550 (includes interest)
 → Monthly payment expected to include interest
 ```
+
+**Note**: `calculateTotalWithInterest()` and `updateInterestRate()` were removed — the interest calculation is already encapsulated in `monthlyImpact()`, and no edit workflow exists to update interest rates.
 
 ---
 
@@ -140,45 +153,30 @@ User adds $500 recurring debt with 10% interest
 
 **Key Methods and Their Logic**:
 
-1. **`addBill(bill)`**: Adds a bill to the group
-   - Simple operation: just pushes the bill into the items array
-   - Used during creation
-
-2. **`removeBill(billId)`**: Removes a bill by ID
-   - Uses filter to create a new array without the matching bill
-   - Effectively deletes from the group
-
-3. **`getTotalMonthlyImpact()`**: Calculates total cost for the group
+1. **`get totalMonthlyImpact`**: Calculates total cost for the group
    - Uses reduce to sum all bills' monthlyImpact() values
+   - Exposed as a getter, not a method — calling code reads `group.totalMonthlyImpact` instead of `group.getTotalMonthlyImpact()`
    - Purpose: Show total spending in each category
    - Example: All subscriptions together = $50/month
 
-4. **`isOverBudget(budget)`**: Checks if group exceeds its budget
-   - Compares getTotalMonthlyImpact() against a budget amount
-   - Used for visual indicators (red color, bold text)
-
-5. **`findDuplicate(name)`**: Detects duplicate bill names
-   - Case-insensitive search for matching bill names
-   - Purpose: Prevent user from adding the same bill twice accidentally
-   - Returns the bill if found, null otherwise
+**Note**: Duplicate detection was previously implemented here but has been consolidated into `BillManager.findDuplicate()` for a single source of truth. The `items` array is managed by `BillManager` (`addToGroup` and `removeFromGroup` methods), keeping `CategoryGroup` focused on calculation operations.
 
 **Example: How CategoryGroup Handles a Day's Work**:
 ```
 Start of day: CategoryGroup("Subscriptions") created with empty items
 
 User adds Netflix ($15/month)
-→ addBill(netflix) → items = [Netflix]
+→ BillManager.addToGroup("Subscriptions", netflix)
+→ items = [Netflix]
 
 User adds Spotify ($10/month)
-→ addBill(spotify) → items = [Netflix, Spotify]
+→ BillManager.addToGroup("Subscriptions", spotify)
+→ items = [Netflix, Spotify]
 
-User checks budget for subscriptions (budget = $30)
-→ getTotalMonthlyImpact() = 15 + 10 = $25
-→ isOverBudget(30) = false ✓
-
-User tries to add Netflix again
-→ findDuplicate("Netflix") finds Netflix
-→ Alert: "Netflix already exists, add anyway?"
+User checks total spending for subscriptions
+→ get totalMonthlyImpact = 15 + 10 = $25
+→ UI compares $25 against subscription budget ($30)
+→ Budget display shows normal color (under budget) ✓
 ```
 
 ---
@@ -190,30 +188,38 @@ User tries to add Netflix again
 **Responsibilities**:
 1. Create bills (factory pattern)
 2. Add/remove bills from groups
-3. Track budgets (total and per-category)
+3. Track budgets via `BudgetPlan` interface
 4. Find duplicates across all groups
-5. Handle pending bills during duplicate scenarios
-6. Calculate totals
+5. Calculate totals
+6. Validate budget allocations
 
 **Key Data Structures**:
 ```typescript
-_groups: CategoryGroup[]           // All bill categories
-_totalBudget: number              // Total monthly budget
-_categoryBudgets: Record<...>      // Budget per category
-_pendingBill: { bill, category }  // Bill awaiting user decision
+_groups: CategoryGroup[]      // All bill categories
+_budgetPlan: BudgetPlan       // Typed budget state (total, subscriptions, utilities, debts)
+```
+
+**BudgetPlan interface**:
+```typescript
+interface BudgetPlan {
+  total: number;        // Total monthly budget
+  subscriptions: number; // Subscriptions category budget
+  utilities: number;      // Utilities category budget
+  debts: number;         // Debts category budget
+}
 ```
 
 **Core Methods and Their Logic**:
 
-### 1. **`createBill(billType, id, name, amount, ...)`** - Factory Method
+### 1. **`createBill(billType, id, name, amount, interestRate)`** - Factory Method
 
 **Purpose**: Creates the appropriate bill type based on the billType string.
 
 **Logic**:
 ```
 Switch on billType:
-- "ProductivitySubscription" → new ProductivitySubscription(...)
-- "EntertainmentSubscription" → new EntertainmentSubscription(...)
+- "ProductivitySubscription" → new ProductivitySubscription(..., "monthly")
+- "EntertainmentSubscription" → new EntertainmentSubscription(..., "monthly")
 - "EssentialUtility" → new EssentialUtility(...)
 - "NonEssentialUtility" → new NonEssentialUtility(...)
 - "OneTimeDebt" → new OneTimeDebt(...)
@@ -227,10 +233,12 @@ Switch on billType:
 - Easy to add new bill types (just add a case)
 - Caller doesn't need to know about specific classes
 
+**Note**: The `billingCycle` parameter was removed from the factory signature — all subscriptions are created with "monthly" cycle by default.
+
 **Example**:
 ```
 UI says: "Create ProductivitySubscription, $100/month"
-→ createBill("ProductivitySubscription", "bill-123", "Adobe", 100, "monthly")
+→ createBill("ProductivitySubscription", "bill-123", "Adobe", 100, 0)
 → Returns new ProductivitySubscription instance ready to use
 ```
 
@@ -253,13 +261,13 @@ removeFromGroup:
 
 ---
 
-### 3. **`getTotal()`** - Calculate All Expenses
+### 3. **`get total`** - Calculate All Expenses
 
 **Purpose**: Sum up all bills across all groups to show total monthly spending.
 
 **Logic**:
 ```
-return sum of all groups' getTotalMonthlyImpact()
+return sum of all groups' totalMonthlyImpact
      = Subscriptions total + Utilities total + Debts total
 ```
 
@@ -270,12 +278,12 @@ return sum of all groups' getTotalMonthlyImpact()
 Subscriptions: $25
 Utilities: $150
 Debts: $200
-→ getTotal() = $375/month
+→ total = $375/month
 ```
 
 ---
 
-### 4. **`findDuplicate(name)` - Cross-Group Search**
+### 4. **`findDuplicate(name)`** - Cross-Group Search
 
 **Purpose**: Check if a bill name exists anywhere across all groups.
 
@@ -301,65 +309,27 @@ Then search is simple on the flat array.
 
 ### 5. **Budget Management Methods**
 
-**`getBudgetAmount(category)` and `setCategoryBudget(...)`**:
-- Stores and retrieves budget targets
-- Allows users to set spending limits
+**`getCategoryBudget(category)` and `setBudgets(...)`**:
+- Retrieves budget via typed interface (using switch statement over `BudgetPlan` keys)
+- Stores budgets in typed `BudgetPlan` structure
 - Used for visual indicators (red if over, green if under)
 
----
+### 6. **`validateBudgetAllocation(total, subs, utils, debts)`** - Budget Validation
 
-### 6. **Pending Bill System**
-
-**Purpose**: Handle the duplicate bill scenario gracefully.
-
-**Methods**:
-- `setPendingBill(bill, category)`: Store a bill waiting for user decision
-- `clearPendingBill()`: Clear the pending bill
-- `getPendingBill()`: Retrieve the pending bill
-
-**Why needed?**
-When a duplicate is found, we don't immediately reject it. Instead:
-1. Store it as "pending"
-2. Show user a dialog with options
-3. User can choose: "Cancel", "Add Anyway", or "Update Existing"
-4. Once user decides, act on the pending bill
-
-**Example flow**:
-```
-User submits form with "Netflix"
-→ Manager checks for duplicates
-→ Finds existing Netflix ($15)
-→ setPendingBill(newBill, "Subscriptions")
-→ Shows alert to user
-User clicks "Add Anyway"
-→ Manager adds the pending bill
-→ Clears pending state
-```
-
----
-
-### 7. **`updateBill(existingBillId, newBill, targetCategory)`** - Update Logic
-
-**Purpose**: Update an existing bill with new data, potentially moving it to a different category.
+**Purpose**: Verify that category budgets do not exceed the total budget.
 
 **Logic**:
 ```
-1. Find the bill with matching ID across all groups
-2. Remove it from its current group
-3. Find the target category group
-4. Add the new bill to the target group
+return subs + utils + debts <= total
 ```
 
-**Why important?**
-Users might change their mind about a bill type (e.g., "I want this as Annual instead of Monthly")
+**Why this matters?**
+```
+If user sets $100 total but subscriptions+utilities+debts = $150, it's impossible.
+We catch this before saving budgets.
+```
 
-**Example**:
-```
-User has "Netflix Monthly $15" in Subscriptions
-User updates to "Netflix Annual $180" in Subscriptions
-→ Old bill removed, new bill added
-→ Calculations automatically use new amount and cycle
-```
+This method encapsulates the budget constraint rule that was previously in the UI layer. Moving it to `BillManager` ensures the business rule is owned by the domain/service layer, not scattered in event handlers.
 
 ---
 
@@ -371,7 +341,7 @@ User updates to "Netflix Annual $180" in Subscriptions
 1. Render the UI (groups, history, budgets)
 2. Handle user input (form submissions, button clicks)
 3. Show/hide conditional fields based on bill type
-4. Display duplicate alerts
+4. Display duplicate alerts and manage pending bill state
 5. Maintain history of added bills
 6. Update budget displays
 
@@ -379,6 +349,22 @@ User updates to "Netflix Annual $180" in Subscriptions
 ```
 DOM Events → Event Handlers → Manager Methods → UI Updates
 ```
+
+---
+
+### Pending Bill State
+
+The duplicate workflow requires temporary state to hold a bill while the user makes a decision. This state lives in `TrackerUI` (not `BillManager`) because it is dialog state:
+
+```typescript
+private _pendingBill: Bill | null = null;    // Bill waiting for user decision
+private _pendingCategory: string = "";       // Target category for the pending bill
+```
+
+**Exposed via public getters/setters**:
+- `get pendingBill()` / `set pendingBill()`: Access and mutate the pending bill
+- `get pendingCategory()` / `set pendingCategory()`: Access and mutate the target category
+- `clearPendingBill()`: Resets both to empty state (made public since it is called from event listeners registered on document elements)
 
 ---
 
@@ -392,12 +378,13 @@ DOM Events → Event Handlers → Manager Methods → UI Updates
 ```
 1. Prevent default form submission
 2. Extract form data:
-   - name, category, billType, amount, billingCycle, interestRate
+   - name, category, billType, amount, interestRate
 3. Validate all required fields
 4. Create the bill using manager.createBill()
-5. Check for duplicates:
+   - ID generated via Bill.generateId()
+5. Check for duplicates using manager.findDuplicate():
    IF duplicate found:
-      - Store as pending
+      - Store as pending in UI
       - Show duplicate alert
       - RETURN (wait for user decision)
    ELSE:
@@ -419,6 +406,7 @@ User fills form:
 - Cycle: "monthly"
 
 → Manager creates ProductivitySubscription instance
+→ Bill.generateId() provides unique ID
 → No duplicate found
 → Adds to Subscriptions group
 → Adds to history: "Adobe Creative Cloud - Subscription - ₱55.00"
@@ -499,17 +487,21 @@ User clicks "Delete" on Netflix bill
 **Logic**:
 ```
 1. Extract: totalBudget, subscriptionBudget, utilityBudget, debtBudget
-2. Validate: category budgets must not exceed total budget
-   IF validation fails:
+2. Validate using manager.validateBudgetAllocation():
+   IF validation fails (sum > total):
       - Show error message
       - RETURN (don't save)
 3. Save all budgets using manager.setBudgets()
 4. Hide error message
-5. Re-render UI with new budget information
+5. Reset budget form (clear input fields)
+6. Re-render UI with new budget information
 ```
 
-**Why validation matters?**
-If user sets $100 total but subscriptions+utilities+debts = $150, it's impossible. We catch this early.
+**Why validation in the manager?**
+The budget constraint rule (`subs + utils + debts <= total`) is a business rule, not a UI rule. By delegating to `BillManager.validateBudgetAllocation()`, the rule is centralized and testable.
+
+**Form Reset**:
+After successfully saving budgets, the form is cleared (same pattern as bill submission) to provide a clean state for entering new budget values.
 
 **Example**:
 ```
@@ -528,7 +520,9 @@ User corrects to:
 - Utilities: $200
 - Debts: $100
 → Sum = 500 ≤ 500 ✓
-→ Budgets saved
+→ Budgets saved via manager.setBudgets()
+→ Form fields cleared
+→ UI updates to show new budget information
 ```
 
 ---
@@ -582,12 +576,12 @@ renderHistory()  → Display recent bills added
 
 **Sorting by priority**:
 ```
-Essential Utility: 5 (highest)
-Recurring Debt:    5 (highest)
-Entertainment:     2
-Productivity:      3
-One-time Debt:     4
-Non-essential:     1 (lowest)
+Essential Utility:     5 (highest)
+Recurring Debt:       5 (highest)
+One-time Debt:        4
+Productivity:         3
+Entertainment:        2
+Non-essential Utility: 1 (lowest)
 
 Bills display in this order (highest to lowest importance)
 ```
@@ -641,7 +635,7 @@ Recently Added:
 **Logic**:
 ```
 1. Calculate totalExpenses using manager.getTotal()
-2. Get totalBudget from manager
+2. Get totalBudget from manager (via BudgetPlan)
 3. Calculate remaining = totalBudget - totalExpenses
 4. Update displays:
    - Total expenses: "₱375.00"
@@ -672,25 +666,26 @@ Remaining: -₱50.00  (red, bold - OVER BUDGET!)
 
 ### Duplicate Handling System
 
-**Three Methods Work Together**:
+The duplicate workflow is managed through a combination of UI state (pending bill) and dialog interactions:
 
-1. **`showDuplicateAlert(existingBill, newName)`**: Display modal with options
-   ```
-   Modal shows:
-   "A bill named 'Netflix' already exists (Entertainment - ₱15.00/month).
-    Do you still want to add 'Netflix'?"
-   
-   Options: [Cancel] [Update] [Add Anyway]
-   ```
+**Pending Bill Flow**:
+```
+1. onFormSubmit detects duplicate
+2. Stores bill + category in TrackerUI._pendingBill / _pendingCategory
+3. Calls showDuplicateAlert() to display modal
+4. User makes a choice via dialog buttons
+5. Based on choice: add anyway, update existing, or cancel
+6. clearPendingBill() resets UI state
+```
 
-2. **`hideDuplicateAlert()`**: Close the modal
+**Dialog Buttons**:
+```
+Cancel: Clear pending bill, close modal, reset form
+Add Anyway: Add the duplicate bill to the group, clear state, re-render
+Update: Replace old bill with new bill data, clear state, re-render
+```
 
-3. **Event Listeners** for the three choices:
-   ```
-   Cancel: Clear pending bill, close modal
-   Add Anyway: Confirm adding the bill (even if duplicate)
-   Update: Replace old bill with new bill data
-   ```
+**Note**: The previous design had pending bill state in `BillManager`. This was refactored — `BillManager` should manage business data, not temporary dialog state. The UI layer now owns the pending bill, which is more appropriate since it is tied to the modal lifecycle.
 
 **User Scenarios**:
 ```
@@ -763,6 +758,7 @@ Scenario 3: Update existing bill
 │ 8. onFormSubmit fires:                                  │
 │    - Extracts form data                                 │
 │    - Validates all fields                               │
+│    - Generates ID: Bill.generateId()                    │
 │    - Calls manager.createBill(...)                      │
 │    - Creates EntertainmentSubscription instance         │
 │    - Calls manager.findDuplicate("Netflix")             │
@@ -803,15 +799,16 @@ Scenario 3: Update existing bill
                  │
 ┌────────────────▼────────────────────────────────────────┐
 │ onFormSubmit fires:                                     │
+│ - Generates ID via Bill.generateId()                    │
 │ - Creates new EntertainmentSubscription("Netflix", 15)  │
 │ - Calls manager.findDuplicate("Netflix")                │
 │ - FINDS existing Netflix!                               │
 └────────────────┬────────────────────────────────────────┘
                  │
 ┌────────────────▼────────────────────────────────────────┐
-│ Duplicate handling:                                     │
+│ Duplicate handling (in TrackerUI):                      │
 │ - Stores _duplicateBillId = existing Netflix's ID       │
-│ - Calls manager.setPendingBill(newBill, "Subscriptions")│
+│ - Calls setPendingBill(newBill, "Subscriptions")        │
 │ - Calls showDuplicateAlert(existingBill, "Netflix")     │
 │ - Modal appears to user                                 │
 └────────────────┬────────────────────────────────────────┘
@@ -823,14 +820,14 @@ Scenario 3: Update existing bill
 │  Do you still want to add 'Netflix'?"                   │
 │                                                         │
 │ Options: [Cancel] [Update] [Add Anyway]                 │
-└────────────────┬────────────────────────────────────────┘
+└─────────────────────────────────────────────────────────┘
                  │
         ┌────────┴─────────┬──────────────────┐
         │                  │                  │
-┌───────▼────────┐  ┌──────▼────────┐  ┌─────▼──────────┐
+┌───────▼────────┐  ┌──────▼────────┐  ┌──────▼─────────┐
 │ User clicks:   │  │ User clicks:  │  │ User clicks:   │
 │ "Cancel"       │  │ "Update"      │  │ "Add Anyway"   │
-└───────┬────────┘  └──────┬────────┘  └─────┬──────────┘
+└───────┬────────┘  └──────┬────────┘  └──────┬─────────┘
         │                  │                  │
         │         ┌────────▼────────┐         │
         │         │ updateBill():   │         │
@@ -844,7 +841,7 @@ Scenario 3: Update existing bill
                          │
         ┌────────────────▼────────────────────┐
         │ Both paths lead to:                 │
-        │ 1. Clear pending bill               │
+        │ 1. Clear pending bill (UI state)    │
         │ 2. Hide duplicate alert             │
         │ 3. Reset form                       │
         │ 4. Render() to update UI            │
@@ -855,7 +852,7 @@ Scenario 3: Update existing bill
         │ Cancel: Bill not added, form reset  │
         │ Update: Old bill replaced           │
         │ Add: Now 2 Netflix bills exist      │
-        └────────────────────────────────────┘
+        └─────────────────────────────────────┘
 ```
 
 ---
@@ -864,17 +861,16 @@ Scenario 3: Update existing bill
 
 ### Input Validation
 
-**Bill Creation Validation**:
-```typescript
-Bill constructor validates:
-- name: must not be empty or whitespace
-  → throws "Name is required"
+**Bill Creation Validation** (in constructor):
+```
+Bill validates on construction:
+- name: must not be empty or whitespace (or trimmed to empty)
+  → silently sets _name to trimmed value
 - amount: must not be negative
-  → throws "Amount cannot be negative"
+  → silently accepts any non-negative number
 
-Debt constructor validates:
-- interestRate: must not be negative
-  → throws "Interest rate cannot be negative"
+Debt validates on construction:
+- interestRate: no explicit validation (implicitly accepts any number)
 ```
 
 **Form Submission Validation**:
@@ -890,10 +886,11 @@ If any fail: silently return (don't add bill)
 
 **Budget Validation**:
 ```
-Check: sum of category budgets ≤ total budget
+Check using manager.validateBudgetAllocation():
+  sum of category budgets ≤ total budget
 
 If exceeds:
-- Show error message
+- Show error message (#budget-error element)
 - Don't save budgets
 - User must correct and try again
 ```
@@ -918,7 +915,6 @@ We do:      Use ?. operator, skip if null
 ```
 Instead of: Assume types are correct
 We do:      Use TypeScript with explicit types
-            Type assertions where needed
             Guard checks before operations
 ```
 
@@ -934,20 +930,22 @@ We do:      Use TypeScript with explicit types
                      │
 ┌────────────────────▼─────────────────────────────────────────┐
 │                  TRACKERUI                                    │
-│           (event handlers, rendering)                         │
+│           (event handlers, rendering, dialog state)             │
 │  - Listens for user input                                    │
 │  - Validates form data                                       │
 │  - Calls manager methods                                     │
 │  - Updates DOM                                               │
+│  - Manages pending bill state for duplicate dialog            │
 └────────────────────┬─────────────────────────────────────────┘
                      │
 ┌────────────────────▼─────────────────────────────────────────┐
 │                 BILLMANAGER                                   │
-│          (business logic, coordination)                       │
+│          (business logic, coordination)                        │
 │  - Creates bills using factory pattern                       │
 │  - Adds/removes bills from groups                            │
 │  - Detects duplicates                                        │
-│  - Manages budgets                                           │
+│  - Manages budgets via BudgetPlan                            │
+│  - Validates budget allocation                                │
 │  - Calculates totals                                         │
 └────────────────────┬─────────────────────────────────────────┘
                      │
@@ -957,27 +955,29 @@ We do:      Use TypeScript with explicit types
 │  CATEGORYGROUP    │      │   BILL HIERARCHY  │
 │                  │      │                   │
 │ - Stores bills   │      │ Subscription      │
-│ - Adds/removes   │      │ ├─ Entertainment  │
-│ - Sums monthly   │      │ ├─ Productivity   │
-│ - Checks budget  │      │ Utility           │
-│ - Finds dupes    │      │ ├─ Essential      │
+│ - Sums monthly   │      │ ├─ Entertainment  │
+│                  │      │ ├─ Productivity   │
+│                  │      │ Utility           │
+│                  │      │ ├─ Essential      │
 │                  │      │ ├─ Non-essential  │
 │                  │      │ Debt              │
 │                  │      │ ├─ One-time       │
 │                  │      │ └─ Recurring      │
 └────────┬─────────┘      └────────┬──────────┘
          │                         │
-         └─────────────┬───────────┘
-                       │
-            ┌──────────▼──────────┐
-            │    DATA STORAGE     │
-            │                     │
-            │ Bills with their:   │
-            │ - names             │
-            │ - amounts           │
-            │ - types             │
-            │ - calculations      │
-            └─────────────────────┘
+         │            ┌─────────────┘
+         │            │
+         └────────────┤
+                      │
+             ┌────────▼──────────┐
+             │    DATA STORAGE   │
+             │                   │
+             │ Bills with their: │
+             │ - names           │
+             │ - amounts         │
+             │ - types           │
+             │ - calculations    │
+             └────────────────────┘
 ```
 
 **Data flows**:
@@ -1010,20 +1010,22 @@ Low-importance items (non-essential utilities) show last
 User's attention goes to what matters most
 ```
 
-### 3. **Budget Tracking** (Composite Pattern)
+### 3. **Budget Tracking** (Typed BudgetPlan)
 ```
-Multiple budget levels:
+Multiple budget levels via BudgetPlan interface:
 - Total budget (all bills)
 - Category budgets (subscriptions, utilities, debts)
 - Individual bill amounts
 All contribute to "over budget?" status
+Validated by BillManager.validateBudgetAllocation()
 ```
 
 ### 4. **State Management** (Pending Bill System)
 ```
-Normal state: No pending bill
-Action state: Pending bill exists, waiting for user decision
-Post-action: Pending bill cleared, operation completed
+Dialog state in TrackerUI:
+- Normal state: No pending bill
+- Action state: Pending bill exists, waiting for user decision
+- Post-action: Pending bill cleared, operation completed
 Three-state flow allows non-blocking user confirmation
 ```
 

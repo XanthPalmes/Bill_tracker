@@ -7,9 +7,7 @@ abstract class Bill {
 
   constructor(id: string, name: string, baseAmount: number) {
     this._id = id;
-    this.validateName(name);
-    this.validateAmount(baseAmount);
-    this._name = name;
+    this._name = name.trim();
     this._amount = baseAmount;
   }
 
@@ -25,33 +23,8 @@ abstract class Bill {
     return this._amount; 
   }
 
-  public update(name: string, amount: number): void {
-    this.validateName(name);
-    this.validateAmount(amount);
-    this._name = name;
-    this._amount = amount;
-  }
-
-  public isValid(): boolean {
-    try {
-      this.validateName(this._name);
-      this.validateAmount(this._amount);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  private validateName(name: string): void {
-    if (!name || name.trim().length === 0) {
-      throw new Error("Name is required");
-    }
-  }
-
-  private validateAmount(amount: number): void {
-    if (amount < 0) {
-      throw new Error("Amount cannot be negative");
-    }
+  public static generateId(prefix = "bill"): string {
+    return `${prefix}-${crypto.randomUUID()}`;
   }
 
   public abstract monthlyImpact(): number;
@@ -59,7 +32,6 @@ abstract class Bill {
   public abstract getBillTypeLabel(): string;
 }
 
-// NOTE: Subscriptions
 abstract class Subscription extends Bill {  
   private _cycle: "monthly" | "annual";
 
@@ -72,20 +44,8 @@ abstract class Subscription extends Bill {
     return this._cycle; 
   }
 
-  public changeCycle(newCycle: "monthly" | "annual"): void {
-    this._cycle = newCycle;
-  }
-
-  public switchToAnnual(): void {
-    this.changeCycle("annual");
-  }
-
-  public switchToMonthly(): void {
-    this.changeCycle("monthly");
-  }
-
   public monthlyImpact(): number {
-    return this.cycle === "annual" ? this.amount / 12 : this.amount;
+    return this._cycle === "annual" ? this.amount / 12 : this.amount;
   }
 }
 
@@ -109,7 +69,6 @@ class ProductivitySubscription extends Subscription {
   }
 }
 
-// NOTE: Utilities
 abstract class Utility extends Bill {
   private _isEstimated: boolean;
 
@@ -120,10 +79,6 @@ abstract class Utility extends Bill {
 
   public get isEstimated(): boolean { 
     return this._isEstimated; 
-  }
-
-  public getEstimatedBuffer(): number {
-    return this._isEstimated ? this.amount * 0.1 : 0;
   }
 
   public monthlyImpact(): number {
@@ -151,37 +106,20 @@ class NonEssentialUtility extends Utility {
   }
 }
 
-// NOTE: Debt
 abstract class Debt extends Bill {
   private _interestRate: number;
 
   constructor(id: string, name: string, baseAmount: number, interestRate: number) {
     super(id, name, baseAmount);
-    this.validateRate(interestRate);
-    this._interestRate = interestRate;  
+    this._interestRate = interestRate;
   }
 
   public get interestRate(): number { 
     return this._interestRate; 
   }
 
-  public updateInterestRate(newRate: number): void {
-    this.validateRate(newRate);
-    this._interestRate = newRate;
-  }
-
-  public calculateTotalWithInterest(): number {
-    return this.amount + (this.amount * this.interestRate / 100);
-  }
-
-  private validateRate(rate: number): void {
-    if (rate < 0) {
-      throw new Error("Interest rate cannot be negative");
-    }
-  }
-
   public monthlyImpact(): number {
-    return this.amount + (this.amount * this.interestRate / 100);
+    return this.amount + (this.amount * this._interestRate / 100);
   }
 }
 
@@ -217,26 +155,26 @@ class CategoryGroup {
     this.label = label;
   }
 
-  public getTotalMonthlyImpact(): number {
+  public get totalMonthlyImpact(): number {
     return this.items.reduce((sum, item) => sum + item.monthlyImpact(), 0);
-  }
-
-  public findDuplicate(name: string): Bill | null {
-    const normalized = name.trim().toLowerCase();
-    return this.items.find((item) => item.name.trim().toLowerCase() === normalized) ?? null;
   }
 }
 
-// NOTE: Manager class
+interface BudgetPlan {
+  total: number;
+  subscriptions: number;
+  utilities: number;
+  debts: number;
+}
+
 class BillManager {
   private _groups: CategoryGroup[];
-  private _totalBudget: number = 0;
-  private _categoryBudgets: Record<string, number> = {
-    "Subscriptions": 0,
-    "Utilities": 0,
-    "Debts": 0,
+  private _budgetPlan: BudgetPlan = {
+    total: 0,
+    subscriptions: 0,
+    utilities: 0,
+    debts: 0,
   };
-  private _pendingBill: { bill: Bill; category: string; } | null = null;
 
   constructor(groups: CategoryGroup[]) {
     this._groups = groups;
@@ -247,11 +185,16 @@ class BillManager {
   }
 
   public get totalBudget(): number {
-    return this._totalBudget;
+    return this._budgetPlan.total;
   }
 
   public getCategoryBudget(category: string): number {
-    return this._categoryBudgets[category] || 0;
+    switch (category) {
+      case "Subscriptions": return this._budgetPlan.subscriptions;
+      case "Utilities": return this._budgetPlan.utilities;
+      case "Debts": return this._budgetPlan.debts;
+      default: return 0;
+    }
   }
 
   public createBill(
@@ -259,14 +202,13 @@ class BillManager {
     id: string, 
     name: string, 
     amount: number, 
-    billingCycle: "monthly" | "annual" = "monthly", 
     interestRate: number
   ): Bill {
     switch (billType) {
       case "ProductivitySubscription":
-        return new ProductivitySubscription(id, name, amount, billingCycle);
+        return new ProductivitySubscription(id, name, amount, "monthly");
       case "EntertainmentSubscription":
-        return new EntertainmentSubscription(id, name, amount, billingCycle);
+        return new EntertainmentSubscription(id, name, amount, "monthly");
       case "EssentialUtility":
         return new EssentialUtility(id, name, amount);
       case "NonEssentialUtility":
@@ -294,8 +236,8 @@ class BillManager {
     }
   }
 
-  public getTotal(): number {
-    return this._groups.reduce((sum, group) => sum + group.getTotalMonthlyImpact(), 0);
+  public get total(): number {
+    return this._groups.reduce((sum, group) => sum + group.totalMonthlyImpact, 0);
   }
 
   public findDuplicate(name: string): Bill | null {
@@ -305,38 +247,12 @@ class BillManager {
       .find((item) => item.name.trim().toLowerCase() === normalized) ?? null;    
   }
 
-  public getPendingBill(): { bill: Bill; category: string; } | null {
-    return this._pendingBill;
-  }
-
   public setBudgets(total: number, subs: number, utils: number, debts: number): void {
-    this._totalBudget = total;
-    this._categoryBudgets["Subscriptions"] = subs;
-    this._categoryBudgets["Utilities"] = utils;
-    this._categoryBudgets["Debts"] = debts;
+    this._budgetPlan = { total, subscriptions: subs, utilities: utils, debts };
   }
 
-  public setPendingBill(bill: Bill, category: string): void {
-    this._pendingBill = { bill, category };
-  }
-
-  public clearPendingBill(): void {
-    this._pendingBill = null;
-  }
-
-  public updateBill(existingBillId: string, newBill: Bill, targetCategory: string): void {
-    for (const group of this._groups) {
-      const index = group.items.findIndex((item) => item.id === existingBillId);
-      if (index !== -1) {
-        group.items.splice(index, 1);
-        break;
-      }
-    }
-
-    const targetGroup = this._groups.find((g) => g.label === targetCategory);
-    if (targetGroup) {
-      targetGroup.items.push(newBill);
-    }
+  public validateBudgetAllocation(total: number, subs: number, utils: number, debts: number): boolean {
+    return subs + utils + debts <= total;
   }
 }
 
@@ -365,6 +281,24 @@ class TrackerUI {
   private _history: HistoryEntry[] = [];
   private _historyListEl: HTMLElement | null;
   private _clearHistoryBtn: HTMLButtonElement | null;
+  private _pendingBill: Bill | null = null;
+  private _pendingCategory: string = "";
+
+  public get pendingBill(): Bill | null {
+    return this._pendingBill;
+  }
+
+  private set pendingBill(bill: Bill | null) {
+    this._pendingBill = bill;
+  }
+
+  public get pendingCategory(): string {
+    return this._pendingCategory;
+  }
+
+  public set pendingCategory(category: string) {
+    this._pendingCategory = category;
+  }
 
   constructor(root: HTMLDivElement, manager: BillManager) {
     this._root = root;
@@ -432,15 +366,15 @@ class TrackerUI {
     this._isBound = true;
 
     document.getElementById("alert-cancel")?.addEventListener("click", () => {
-      this._manager.clearPendingBill();
+      this.clearPendingBill();
       this.hideDuplicateAlert();
     });
 
     document.getElementById("alert-add-anyway")?.addEventListener("click", () => {
-      const pending = this._manager.getPendingBill();
-      if (pending) {
-        this._manager.addToGroup(pending.category, pending.bill);
-        this._manager.clearPendingBill();
+      const bill = this.pendingBill;
+      if (bill) {
+        this._manager.addToGroup(this.pendingCategory, bill);
+        this.clearPendingBill();
         this.hideDuplicateAlert();
         if (this._formEl) {
           this._formEl.reset();
@@ -452,16 +386,16 @@ class TrackerUI {
     
     document.querySelector(".alert-modal")?.addEventListener("click", (e) => {
       if (e.target === document.querySelector(".alert-modal")) {
-        this._manager.clearPendingBill();
+        this.clearPendingBill();
         this.hideDuplicateAlert();
       }
     });
 
     document.getElementById("alert-update")?.addEventListener("click", () => {
-      const pending = this._manager.getPendingBill();
-      if (pending && this._duplicateBillId) {
-        this._manager.updateBill(this._duplicateBillId, pending.bill, pending.category);
-        this._manager.clearPendingBill();
+      const bill = this.pendingBill;
+      if (bill && this._duplicateBillId) {
+        this.updateBillInGroup(this._duplicateBillId, bill, this.pendingCategory);
+        this.clearPendingBill();
         this.hideDuplicateAlert();
         if (this._formEl) {
           this._formEl.reset();
@@ -474,6 +408,25 @@ class TrackerUI {
     this._clearHistoryBtn?.addEventListener("click", () => {
       this.clearHistory();
     });
+  }
+
+  public clearPendingBill(): void {
+    this.pendingBill = null;
+    this.pendingCategory = "";
+  }
+
+  private updateBillInGroup(existingBillId: string, newBill: Bill, targetCategory: string): void {
+    for (const group of this._manager.getGroups()) {
+      const index = group.items.findIndex((item) => item.id === existingBillId);
+      if (index !== -1) {
+        group.items.splice(index, 1);
+        break;
+      }
+    }
+    const targetGroup = this._manager.getGroups().find((g) => g.label === targetCategory);
+    if (targetGroup) {
+      targetGroup.items.push(newBill);
+    }
   }
 
   private showDuplicateAlert(existingBill: Bill, newName: string): void {
@@ -500,7 +453,7 @@ class TrackerUI {
     this.renderHistory();
   }
 
-   private onBudgetSubmit = (event: Event): void => {
+  private onBudgetSubmit = (event: Event): void => {
     event.preventDefault();
     if (!this._budgetFormEl) {
       return;
@@ -512,7 +465,7 @@ class TrackerUI {
     const utils = Number(formData.get("utilBudget"));
     const debts = Number(formData.get("debtBudget"));
 
-    if (subs + utils + debts > total) {
+    if (!this._manager.validateBudgetAllocation(total, subs, utils, debts)) {
       if (this._budgetErrorEl)  { 
         this._budgetErrorEl.style.display = "block";
       }
@@ -560,19 +513,19 @@ class TrackerUI {
     const category = String(formData.get("category") ?? "").trim();
     const billType = String(formData.get("billType") ?? "").trim();
     const amountValue = Number(formData.get("amount"));
-    const billingCycle = (formData.get("billingCycle") as "monthly" | "annual") ?? "monthly";
     const interestRate = Number(formData.get("interestRate"));
 
     if (!name || !category || !billType || Number.isNaN(amountValue)) {
       return;
     }
     
-    const bill = this._manager.createBill(billType, this.newId("bill"), name, amountValue, billingCycle, interestRate);
+    const bill = this._manager.createBill(billType, Bill.generateId(), name, amountValue, interestRate);
     const duplicate = this._manager.findDuplicate(name);
 
     if (duplicate) {
       this._duplicateBillId = duplicate.id;
-      this._manager.setPendingBill(bill, category);
+      this.pendingBill = bill;
+      this.pendingCategory = category;
       this.showDuplicateAlert(duplicate, name);
       return;
     }
@@ -619,7 +572,7 @@ class TrackerUI {
 
   private updateTotals(): void {
     const totalValueEl = this._root.querySelector<HTMLElement>("[data-total]");
-    const totalExp = this._manager.getTotal();
+    const totalExp = this._manager.total;
     const totalBudg = this._manager.totalBudget;
     const remaining = totalBudg - totalExp;
 
@@ -658,7 +611,7 @@ class TrackerUI {
           return;
         }
 
-        const total = group.getTotalMonthlyImpact();
+        const total = group.totalMonthlyImpact;
 
         totalEl.textContent = this.money(total);
 
@@ -714,16 +667,11 @@ class TrackerUI {
       });
   }
 
-  private newId(prefix: string): string { 
-    return `${prefix}-${crypto.randomUUID()}`; 
-  }
-
   private money(value: number): string { 
     return `₱${value.toFixed(2)}`; 
   }
 }
 
-// NOTE: Initialization
 const groups: CategoryGroup[] = [
   new CategoryGroup("Subscriptions"),
   new CategoryGroup("Utilities"),
