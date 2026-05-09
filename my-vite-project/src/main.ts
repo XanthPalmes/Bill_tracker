@@ -483,7 +483,6 @@ class TrackerUI {
       }
     });
 
-    // Clear history functionality
     this._clearHistoryBtn?.addEventListener("click", () => {
       this.clearHistory();
     });
