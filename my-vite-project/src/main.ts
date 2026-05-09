@@ -256,6 +256,21 @@ class BillManager {
   public clearPendingBill(): void {
     this._pendingBill = null;
   }
+
+  public updateBill(existingBillId: string, newBill: Bill, targetCategory: string): void {
+    for (const group of this._groups) {
+      const index = group.items.findIndex((item) => item.id === existingBillId);
+      if (index !== -1) {
+        group.items.splice(index, 1);
+        break;
+      }
+    }
+
+    const targetGroup = this._groups.find((g) => g.label === targetCategory);
+    if (targetGroup) {
+      targetGroup.items.push(newBill);
+    }
+  }
 }
 
 // NOTE: UI class
@@ -273,6 +288,7 @@ class TrackerUI {
   private _budgetErrorEl: HTMLElement | null;
   private _totalBudgetEl: HTMLElement | null;
   private _remainingEl: HTMLElement | null;
+  private _duplicateBillId: string | null = null;
 
   constructor(root: HTMLDivElement, manager: BillManager) {
     this._root = root;
@@ -332,6 +348,20 @@ class TrackerUI {
       if (e.target === document.querySelector(".alert-modal")) {
         this._manager.clearPendingBill();
         this.hideDuplicateAlert();
+      }
+    });
+
+    document.getElementById("alert-update")?.addEventListener("click", () => {
+      const pending = this._manager.getPendingBill();
+      if (pending && this._duplicateBillId) {
+        this._manager.updateBill(this._duplicateBillId, pending.bill, pending.category);
+        this._manager.clearPendingBill();
+        this.hideDuplicateAlert();
+        if (this._formEl) {
+          this._formEl.reset();
+          this.syncTypeOptions("");
+        }
+        this.render();
       }
     });
   }
@@ -423,6 +453,7 @@ class TrackerUI {
 
     const duplicate = this._manager.findDuplicate(name);
     if (duplicate) {
+      this._duplicateBillId = duplicate.id;
       const bill = this._manager.createBill(billType, this.newId("bill"), name, amountValue, billingCycle, interestRate);
       this._manager.setPendingBill(bill, category);
       this.showDuplicateAlert(duplicate, name);

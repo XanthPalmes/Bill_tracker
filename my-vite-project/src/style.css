@@ -581,3 +581,12 @@ body {
 .alert-btn--primary:hover {
   background: #d49568;
 }
+
+.alert-btn--secondary {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.alert-btn--secondary:hover {
+  background: var(--surface-deep);
+}
