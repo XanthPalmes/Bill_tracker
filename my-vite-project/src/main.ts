@@ -277,10 +277,9 @@ class TrackerUI {
   }
 
   private onCategoryChange = (): void => {
-    if (!this._formCategory) {
-      return;
+    if (this._formCategory) {
+      this.syncTypeOptions(this._formCategory.value);
     }
-    this.syncTypeOptions(this._formCategory.value);
   };
 
   private onListClick = (event: Event): void => {
@@ -303,6 +302,7 @@ class TrackerUI {
     if (!this._formEl) {
       return;
     }
+
     const formData = new FormData(this._formEl);
     const name = String(formData.get("name") ?? "").trim();
     const category = String(formData.get("category") ?? "").trim();
