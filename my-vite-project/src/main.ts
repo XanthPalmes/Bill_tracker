@@ -278,6 +278,13 @@ class BillManager {
   }
 }
 
+interface HistoryEntry {
+  name: string;
+  category: string;
+  amount: string;
+  type: string;
+}
+
 // NOTE: UI class
 class TrackerUI {
   private _root: HTMLDivElement;
@@ -294,6 +301,8 @@ class TrackerUI {
   private _totalBudgetEl: HTMLElement | null;
   private _remainingEl: HTMLElement | null;
   private _duplicateBillId: string | null = null;
+  private _history: HistoryEntry[] = [];
+  private _historyListEl: HTMLElement | null;
 
   constructor(root: HTMLDivElement, manager: BillManager) {
     this._root = root;
@@ -308,12 +317,41 @@ class TrackerUI {
     this._budgetErrorEl = this._root.querySelector<HTMLElement>("#budget-error");
     this._totalBudgetEl = this._root.querySelector<HTMLElement>("[data-total-budget]");
     this._remainingEl = this._root.querySelector<HTMLElement>("[data-remaining]");
+    this._historyListEl = this._root.querySelector<HTMLElement>("[data-history-list]");
     this.bindEvents();
   }
 
   public render(): void {
     this.updateTotals();
     this.renderGroups();
+    this.renderHistory();
+  }
+
+  private renderHistory(): void {
+    if (!this._historyListEl) return;
+
+    this._historyListEl.replaceChildren();
+
+    if (this._history.length === 0) {
+      const emptyItem = document.createElement("li");
+      emptyItem.className = "history-empty";
+      emptyItem.textContent = "No bills added yet";
+      this._historyListEl.appendChild(emptyItem);
+      return;
+    }
+
+    this._history.forEach((entry) => {
+      const listItem = document.createElement("li");
+      listItem.className = "history-item";
+      listItem.innerHTML = `
+        <div>
+          <span class="history-item-name">${entry.name}</span>
+          <div class="history-item-meta">${entry.type} in ${entry.category}</div>
+        </div>
+        <span class="history-item-amount">${entry.amount}</span>
+      `;
+      this._historyListEl?.appendChild(listItem);
+    });
   }
 
   private bindEvents(): void {
@@ -467,6 +505,14 @@ class TrackerUI {
 
     const bill = this._manager.createBill(billType, this.newId("bill"), name, amountValue, billingCycle, interestRate);
     this._manager.addToGroup(category, bill);
+    this._history.unshift({
+      name: bill.name,
+      category,
+      amount: this.money(bill.monthlyImpact()),
+      type: bill.getBillTypeLabel()
+    });
+    this._history = this._history.slice(0, 10);
+    this.renderHistory();
     this._formEl.reset();
     this.syncTypeOptions("");
     this.render();

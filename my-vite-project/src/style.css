@@ -590,3 +590,52 @@ body {
 .alert-btn--secondary:hover {
   background: var(--surface-deep);
 }
+
+.history-panel {
+  position: static;
+}
+
+.history-list {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+  display: grid;
+  gap: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.history-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 12px; 
+  background: var(--surface-deep);
+  border: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
+.history-empty {
+  color: var(--muted);
+  font-size: 0.85rem;
+  justify-content: center !important;
+  padding: 20px;
+}
+
+.history-item-name {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.history-item-meta {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.history-item-amount {
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+}
