@@ -268,6 +268,7 @@ class TrackerUI {
   private _formTypeField: HTMLElement | null;
   private _formCycleField: HTMLElement | null;
   private _formEl: HTMLFormElement | null;
+  private _formInterestRateField: HTMLElement | null;
   private _budgetFormEl: HTMLFormElement | null;
   private _budgetErrorEl: HTMLElement | null;
   private _totalBudgetEl: HTMLElement | null;
@@ -281,6 +282,7 @@ class TrackerUI {
     this._formTypeField = this._root.querySelector<HTMLElement>("[data-type-field]");
     this._formCycleField = this._root.querySelector<HTMLElement>("[data-billing-cycle-field]");
     this._formEl = this._root.querySelector<HTMLFormElement>("[data-form]");
+    this._formInterestRateField = this._root.querySelector<HTMLElement>("[data-interest-rate-field]");
     this._budgetFormEl = this._root.querySelector<HTMLFormElement>("[data-budget-form]");
     this._budgetErrorEl = this._root.querySelector<HTMLElement>("#budget-error");
     this._totalBudgetEl = this._root.querySelector<HTMLElement>("[data-total-budget]");
@@ -435,13 +437,14 @@ class TrackerUI {
   };
 
   private syncTypeOptions(category: string): void {
-    if (!this._formType || !this._formTypeField || !this._formCycleField) {
+    if (!this._formType || !this._formTypeField || !this._formCycleField || !this._formInterestRateField ) {
       return;
     }
 
     const hasCategory = category.length > 0;
     this._formTypeField.hidden = !hasCategory;
     this._formCycleField.hidden = category !== "Subscriptions";
+    this._formInterestRateField.hidden = category !== "Debts";
 
     Array.from(this._formType.options).forEach((option) => {
       const isMatch = option.dataset.category === category;
